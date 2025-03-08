@@ -2,6 +2,8 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Send, User, Bot } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { supabase } from '@/lib/supabase';
+import { useToast } from '@/hooks/use-toast';
 
 interface Message {
   id: string;
@@ -20,10 +22,11 @@ const initialMessages: Message[] = [
 ];
 
 const suggestedQuestions = [
-  'Como funciona o agendamento?',
   'Quais são as propriedades mais populares?',
-  'Vocês têm opções para crianças?',
-  'Preciso reservar com antecedência?'
+  'Quero conhecer vinícolas na região',
+  'Como funciona o agendamento de visitas?',
+  'Procuro atividades para crianças',
+  'Quais cafés coloniais você recomenda?'
 ];
 
 const Chatbot = () => {
@@ -31,13 +34,37 @@ const Chatbot = () => {
   const [inputValue, setInputValue] = useState('');
   const [isTyping, setIsTyping] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const { toast } = useToast();
 
   // Auto-scroll to bottom when messages change
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
 
-  const handleSend = () => {
+  const callAgroAssistant = async (userMessage: string) => {
+    try {
+      const { data, error } = await supabase.functions.invoke('agro-assistant', {
+        body: { message: userMessage }
+      });
+
+      if (error) {
+        console.error('Error calling assistant:', error);
+        throw new Error(error.message);
+      }
+
+      return data.response;
+    } catch (error) {
+      console.error('Failed to get assistant response:', error);
+      toast({
+        title: "Erro na comunicação",
+        description: "Não foi possível conectar ao assistente. Tente novamente mais tarde.",
+        variant: "destructive"
+      });
+      return "Desculpe, estou enfrentando dificuldades técnicas no momento. Por favor, tente novamente mais tarde ou entre em contato pelo WhatsApp.";
+    }
+  };
+
+  const handleSend = async () => {
     if (inputValue.trim() === '') return;
     
     // Add user message
@@ -52,18 +79,34 @@ const Chatbot = () => {
     setInputValue('');
     setIsTyping(true);
     
-    // Simulate bot response after a short delay
-    setTimeout(() => {
+    try {
+      // Get response from our assistant
+      const assistantResponse = await callAgroAssistant(inputValue);
+      
+      // Add bot response
       const botResponse: Message = {
         id: (Date.now() + 1).toString(),
-        text: getBotResponse(inputValue),
+        text: assistantResponse,
         sender: 'bot',
         timestamp: new Date()
       };
       
       setMessages(prev => [...prev, botResponse]);
+    } catch (error) {
+      console.error('Error getting response:', error);
+      
+      // Add fallback response in case of error
+      const errorResponse: Message = {
+        id: (Date.now() + 1).toString(),
+        text: "Desculpe, estou enfrentando dificuldades técnicas no momento. Por favor, tente novamente mais tarde.",
+        sender: 'bot',
+        timestamp: new Date()
+      };
+      
+      setMessages(prev => [...prev, errorResponse]);
+    } finally {
       setIsTyping(false);
-    }, 1000);
+    }
   };
   
   const handleKeyDown = (e: React.KeyboardEvent) => {
@@ -78,23 +121,6 @@ const Chatbot = () => {
     setTimeout(() => {
       handleSend();
     }, 100);
-  };
-  
-  // Simple response logic
-  const getBotResponse = (input: string): string => {
-    const lowerInput = input.toLowerCase();
-    
-    if (lowerInput.includes('reserva') || lowerInput.includes('agendar') || lowerInput.includes('funciona o agendamento')) {
-      return 'Para fazer uma reserva, basta escolher a propriedade desejada, selecionar a data e número de visitantes. Você pode fazer isso diretamente no site ou entrar em contato pelo WhatsApp.';
-    } else if (lowerInput.includes('populares') || lowerInput.includes('recomenda')) {
-      return 'Nossas propriedades mais populares atualmente são a Fazenda Vale Verde em Morretes, o Recanto das Araucárias em Guarapuava e a Vinícola Santa Clara em Bituruna. Todas têm avaliações acima de 4.7!';
-    } else if (lowerInput.includes('criança') || lowerInput.includes('família')) {
-      return 'Sim! Muitas de nossas propriedades são ótimas para crianças. Recomendo o Sítio Água Cristalina e a Fazenda Vale Verde, que têm atividades especiais para os pequenos como passeios de pônei, colheita de frutas e contato com animais.';
-    } else if (lowerInput.includes('antecedência') || lowerInput.includes('quanto tempo')) {
-      return 'Recomendamos reservar com pelo menos 3 dias de antecedência, especialmente para fins de semana e feriados. Para grupos grandes, o ideal é reservar com 1-2 semanas de antecedência.';
-    } else {
-      return 'Obrigado pela sua mensagem! Como posso ajudar mais especificamente com sua viagem de agroturismo no Paraná? Você está procurando algum tipo específico de propriedade ou experiência?';
-    }
   };
   
   return (
