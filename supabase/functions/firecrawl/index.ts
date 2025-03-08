@@ -48,8 +48,11 @@ serve(async (req) => {
 
     console.log(`Scraping data from URL: ${url}`);
 
-    // Call Firecrawl API to extract data - FIX: Updated API endpoint to the correct one
-    const firecrawlResponse = await fetch("https://api.firecrawl.dev/api/v1/crawl", {
+    // Call Firecrawl API to extract data - Using the correct API endpoint format
+    const firecrawlUrl = "https://api.firecrawl.dev/api/v1/extract";
+    console.log(`Making request to Firecrawl API endpoint: ${firecrawlUrl}`);
+    
+    const firecrawlResponse = await fetch(firecrawlUrl, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -57,32 +60,28 @@ serve(async (req) => {
       },
       body: JSON.stringify({
         url: url,
-        limit: 5, // Limit number of pages to crawl
-        scrapeOptions: {
-          extractRules: {
+        selectors: {
+          properties: {
+            selector: "div.property-card, div.listing-item, article.property, .property-listing, .destination-item, .product-card, .tour-item, .accommodation-item, .card, .item, .product",
+            type: "list",
             properties: {
-              selector: "div.property-card, div.listing-item, article.property, .property-listing, .destination-item, .product-card, .tour-item, .accommodation-item",
-              type: "list",
-              properties: {
-                name: ".property-name, .property-title, h2, h3, .title, .name",
-                description: ".property-description, .description, p, .excerpt, .summary",
-                location: ".property-location, .location, .address, .place",
-                price: ".property-price, .price, .value, .cost",
-                image: {
-                  selector: "img",
-                  type: "attribute",
-                  attribute: "src"
-                },
-                contact: {
-                  selector: ".contact-info, .contact",
-                  properties: {
-                    phone: ".phone, [href^='tel:'], .telephone",
-                    email: ".email, [href^='mailto:']",
-                    website: {
-                      selector: "a.website, .website a, a.site, .external-link",
-                      type: "attribute",
-                      attribute: "href"
-                    }
+              name: "h1, h2, h3, h4, .title, .name, .heading",
+              description: "p, .description, .excerpt, .summary, .text",
+              location: ".location, .address, .place, .region",
+              price: ".price, .cost, .value",
+              image: {
+                selector: "img",
+                type: "attribute",
+                attribute: "src"
+              },
+              contact: {
+                properties: {
+                  phone: ".phone, [href^='tel:'], .telephone, .contact",
+                  email: ".email, [href^='mailto:']",
+                  website: {
+                    selector: "a.website, a.site, .external-link, a[href^='http']",
+                    type: "attribute",
+                    attribute: "href"
                   }
                 }
               }
@@ -95,6 +94,8 @@ serve(async (req) => {
     if (!firecrawlResponse.ok) {
       const errorText = await firecrawlResponse.text();
       console.error("Firecrawl API error:", errorText);
+      console.error("Status code:", firecrawlResponse.status);
+      console.error("Status text:", firecrawlResponse.statusText);
       throw new Error(`Firecrawl API error: ${errorText}`);
     }
 
@@ -104,8 +105,8 @@ serve(async (req) => {
     // Process and clean the extracted data
     const extractedProperties: ExtractedProperty[] = [];
     
-    if (data && data.data && Array.isArray(data.data.properties)) {
-      data.data.properties.forEach((prop: any) => {
+    if (data && data.properties && Array.isArray(data.properties)) {
+      data.properties.forEach((prop: any) => {
         const property: ExtractedProperty = {
           name: prop.name || '',
           description: prop.description || '',
