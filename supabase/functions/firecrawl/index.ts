@@ -48,8 +48,8 @@ serve(async (req) => {
 
     console.log(`Scraping data from URL: ${url}`);
 
-    // Call Firecrawl API to extract data
-    const firecrawlResponse = await fetch("https://api.firecrawl.dev/v1/api/crawl", {
+    // Call Firecrawl API to extract data - FIX: Updated API endpoint to the correct one
+    const firecrawlResponse = await fetch("https://api.firecrawl.dev/crawl", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
