@@ -58,6 +58,14 @@ const Hero = () => {
       {/* Content */}
       <div className="relative z-20 h-full flex flex-col items-center justify-center px-4 sm:px-6 lg:px-8 text-center">
         <div className={`max-w-4xl mx-auto transition-all duration-700 ease-out ${isLoaded ? 'translate-y-0 opacity-100' : 'translate-y-10 opacity-0'}`}>
+          <div className="mb-8 flex justify-center">
+            <img 
+              src="/lovable-uploads/e519efc1-257a-49de-acaa-461d821b5ad9.png" 
+              alt="AgroRota Logo" 
+              className="h-24 w-auto" 
+            />
+          </div>
+          
           <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold text-white mb-6 leading-tight tracking-tight">
             {slides[currentSlide].title}
           </h1>

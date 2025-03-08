@@ -52,8 +52,13 @@ const Navbar = () => {
         <div className="flex items-center justify-between">
           {/* Logo */}
           <Link to="/" className="flex items-center space-x-2">
+            <img 
+              src="/lovable-uploads/e519efc1-257a-49de-acaa-461d821b5ad9.png" 
+              alt="AgroRota Logo" 
+              className="h-10 w-auto" 
+            />
             <span className="text-xl md:text-2xl font-bold playfair tracking-tight text-nature-800">
-              Agro<span className="text-nature-600">Paraná</span>
+              Agro<span className="text-nature-600">Rota</span>
             </span>
           </Link>
 

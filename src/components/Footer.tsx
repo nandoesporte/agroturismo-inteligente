@@ -42,9 +42,14 @@ const Footer = () => {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-8">
           {/* Logo and description */}
           <div className="lg:col-span-2">
-            <Link to="/" className="inline-block">
+            <Link to="/" className="inline-flex items-center space-x-2">
+              <img 
+                src="/lovable-uploads/e519efc1-257a-49de-acaa-461d821b5ad9.png" 
+                alt="AgroRota Logo" 
+                className="h-10 w-auto" 
+              />
               <span className="text-2xl font-bold playfair tracking-tight text-nature-800">
-                Agro<span className="text-nature-600">Paraná</span>
+                Agro<span className="text-nature-600">Rota</span>
               </span>
             </Link>
             <p className="mt-4 text-muted-foreground text-sm max-w-xs">
@@ -122,7 +127,7 @@ const Footer = () => {
         <div className="mt-12 pt-6 border-t border-border">
           <div className="flex flex-col sm:flex-row justify-between items-center">
             <p className="text-sm text-muted-foreground">
-              © {currentYear} AgroParaná. Todos os direitos reservados.
+              © {currentYear} AgroRota. Todos os direitos reservados.
             </p>
             <div className="mt-4 sm:mt-0 flex space-x-4">
               <Link 
