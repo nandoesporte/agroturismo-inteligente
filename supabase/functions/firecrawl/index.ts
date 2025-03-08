@@ -27,7 +27,9 @@ serve(async (req) => {
   }
 
   try {
-    const FIRECRAWL_API_KEY = Deno.env.get('FIRECRAWL_API_KEY');
+    // Use the API key provided by the user
+    const FIRECRAWL_API_KEY = "fc-a0d24fd2d0074dcd8ed94a7082bf19c2";
+    
     if (!FIRECRAWL_API_KEY) {
       throw new Error("Missing Firecrawl API key");
     }
@@ -59,13 +61,13 @@ serve(async (req) => {
         scrapeOptions: {
           extractRules: {
             properties: {
-              selector: "div.property-card, div.listing-item, article.property, .property-listing",
+              selector: "div.property-card, div.listing-item, article.property, .property-listing, .destination-item, .product-card, .tour-item, .accommodation-item",
               type: "list",
               properties: {
-                name: ".property-name, .property-title, h2, h3",
-                description: ".property-description, .description, p",
-                location: ".property-location, .location, .address",
-                price: ".property-price, .price",
+                name: ".property-name, .property-title, h2, h3, .title, .name",
+                description: ".property-description, .description, p, .excerpt, .summary",
+                location: ".property-location, .location, .address, .place",
+                price: ".property-price, .price, .value, .cost",
                 image: {
                   selector: "img",
                   type: "attribute",
@@ -74,10 +76,10 @@ serve(async (req) => {
                 contact: {
                   selector: ".contact-info, .contact",
                   properties: {
-                    phone: ".phone, [href^='tel:']",
+                    phone: ".phone, [href^='tel:'], .telephone",
                     email: ".email, [href^='mailto:']",
                     website: {
-                      selector: "a.website, .website a, a.site",
+                      selector: "a.website, .website a, a.site, .external-link",
                       type: "attribute",
                       attribute: "href"
                     }
