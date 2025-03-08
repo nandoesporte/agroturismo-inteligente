@@ -18,9 +18,9 @@ serve(async (req) => {
       throw new Error("Missing GROQ API key");
     }
 
-    const { message, context } = await req.json();
+    const { message, context = [] } = await req.json();
 
-    // Preparar o sistema de prompt para o assistente virtual
+    // Prepare the system prompt for the virtual assistant
     const systemPrompt = `
       Você é um assistente virtual especializado em agroturismo no Paraná. Sua função é ajudar os usuários a explorar roteiros, 
       agendar visitas, responder perguntas e coletar feedbacks. Siga estas diretrizes:
@@ -51,7 +51,16 @@ serve(async (req) => {
       Seja útil e tente dar respostas curtas e práticas. Responda sempre em português.
     `;
 
-    // Fazer a requisição para a API da Groq
+    // Build the messages array with context
+    const messages = [
+      { role: "system", content: systemPrompt },
+      ...context,
+      { role: "user", content: message }
+    ];
+
+    console.log("Sending request to Groq API with messages:", JSON.stringify(messages, null, 2));
+
+    // Make the request to the Groq API
     const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
       method: "POST",
       headers: {
@@ -60,10 +69,7 @@ serve(async (req) => {
       },
       body: JSON.stringify({
         model: "llama3-8b-8192",
-        messages: [
-          { role: "system", content: systemPrompt },
-          { role: "user", content: message }
-        ],
+        messages: messages,
         temperature: 0.7,
         max_tokens: 1024
       })
@@ -76,10 +82,14 @@ serve(async (req) => {
     }
 
     const data = await response.json();
+    console.log("Received response from Groq API:", JSON.stringify(data, null, 2));
     const assistantResponse = data.choices[0].message.content;
 
     return new Response(
-      JSON.stringify({ response: assistantResponse }),
+      JSON.stringify({ 
+        response: assistantResponse,
+        message: { role: "assistant", content: assistantResponse }
+      }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   } catch (error) {

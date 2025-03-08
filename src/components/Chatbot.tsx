@@ -10,6 +10,8 @@ interface Message {
   text: string;
   sender: 'user' | 'bot';
   timestamp: Date;
+  role?: 'user' | 'assistant'; // For API context
+  content?: string; // For API context
 }
 
 const initialMessages: Message[] = [
@@ -17,7 +19,9 @@ const initialMessages: Message[] = [
     id: '1',
     text: 'Olá! Sou o assistente virtual do AgroParaná. Como posso ajudar você hoje?',
     sender: 'bot',
-    timestamp: new Date()
+    timestamp: new Date(),
+    role: 'assistant',
+    content: 'Olá! Sou o assistente virtual do AgroParaná. Como posso ajudar você hoje?'
   }
 ];
 
@@ -41,10 +45,25 @@ const Chatbot = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
 
+  // Prepare context for the API from previous messages
+  const prepareContext = () => {
+    // Only include the last 10 messages to avoid token limits
+    return messages
+      .slice(-10)
+      .filter(msg => msg.role && msg.content)
+      .map(msg => ({
+        role: msg.role,
+        content: msg.content
+      }));
+  };
+
   const callAgroAssistant = async (userMessage: string) => {
     try {
+      const context = prepareContext();
+      console.log("Sending context to API:", context);
+      
       const { data, error } = await supabase.functions.invoke('agro-assistant', {
-        body: { message: userMessage }
+        body: { message: userMessage, context }
       });
 
       if (error) {
@@ -52,7 +71,10 @@ const Chatbot = () => {
         throw new Error(error.message);
       }
 
-      return data.response;
+      return { 
+        response: data.response,
+        message: data.message
+      };
     } catch (error) {
       console.error('Failed to get assistant response:', error);
       toast({
@@ -60,7 +82,13 @@ const Chatbot = () => {
         description: "Não foi possível conectar ao assistente. Tente novamente mais tarde.",
         variant: "destructive"
       });
-      return "Desculpe, estou enfrentando dificuldades técnicas no momento. Por favor, tente novamente mais tarde ou entre em contato pelo WhatsApp.";
+      return { 
+        response: "Desculpe, estou enfrentando dificuldades técnicas no momento. Por favor, tente novamente mais tarde ou entre em contato pelo WhatsApp.",
+        message: {
+          role: "assistant", 
+          content: "Desculpe, estou enfrentando dificuldades técnicas no momento. Por favor, tente novamente mais tarde ou entre em contato pelo WhatsApp."
+        }
+      };
     }
   };
 
@@ -72,7 +100,9 @@ const Chatbot = () => {
       id: Date.now().toString(),
       text: inputValue,
       sender: 'user',
-      timestamp: new Date()
+      timestamp: new Date(),
+      role: 'user',
+      content: inputValue
     };
     
     setMessages(prev => [...prev, userMessage]);
@@ -81,14 +111,16 @@ const Chatbot = () => {
     
     try {
       // Get response from our assistant
-      const assistantResponse = await callAgroAssistant(inputValue);
+      const result = await callAgroAssistant(inputValue);
       
       // Add bot response
       const botResponse: Message = {
         id: (Date.now() + 1).toString(),
-        text: assistantResponse,
+        text: result.response,
         sender: 'bot',
-        timestamp: new Date()
+        timestamp: new Date(),
+        role: 'assistant',
+        content: result.response
       };
       
       setMessages(prev => [...prev, botResponse]);
@@ -100,7 +132,9 @@ const Chatbot = () => {
         id: (Date.now() + 1).toString(),
         text: "Desculpe, estou enfrentando dificuldades técnicas no momento. Por favor, tente novamente mais tarde.",
         sender: 'bot',
-        timestamp: new Date()
+        timestamp: new Date(),
+        role: 'assistant',
+        content: "Desculpe, estou enfrentando dificuldades técnicas no momento. Por favor, tente novamente mais tarde."
       };
       
       setMessages(prev => [...prev, errorResponse]);
@@ -215,7 +249,12 @@ const Chatbot = () => {
             placeholder="Digite sua mensagem..."
             value={inputValue}
             onChange={(e) => setInputValue(e.target.value)}
-            onKeyDown={handleKeyDown}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                handleSend();
+              }
+            }}
             rows={1}
           />
           <button
