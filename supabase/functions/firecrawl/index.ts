@@ -49,7 +49,7 @@ serve(async (req) => {
     console.log(`Scraping data from URL: ${url}`);
 
     // Call Firecrawl API to extract data - FIX: Updated API endpoint to the correct one
-    const firecrawlResponse = await fetch("https://api.firecrawl.dev/crawl", {
+    const firecrawlResponse = await fetch("https://api.firecrawl.dev/api/v1/crawl", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -95,7 +95,7 @@ serve(async (req) => {
     if (!firecrawlResponse.ok) {
       const errorText = await firecrawlResponse.text();
       console.error("Firecrawl API error:", errorText);
-      throw new Error(`Firecrawl API error: ${firecrawlResponse.status}`);
+      throw new Error(`Firecrawl API error: ${errorText}`);
     }
 
     const data = await firecrawlResponse.json();
