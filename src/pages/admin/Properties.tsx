@@ -23,8 +23,10 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Edit, Plus, Trash2, Image } from 'lucide-react';
+import { Edit, Plus, Trash2, Image, Database } from 'lucide-react';
 import { Checkbox } from '@/components/ui/checkbox';
+import { ScrapingTool } from '@/components/admin/ScrapingTool';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 interface Property {
   id: string;
@@ -53,6 +55,7 @@ const AdminProperties = () => {
     tags: '',
     is_featured: false
   });
+  const [activeTab, setActiveTab] = useState("properties");
   const { toast } = useToast();
 
   useEffect(() => {
@@ -192,193 +195,222 @@ const AdminProperties = () => {
     });
   };
 
+  const handleImportProperty = (property: any) => {
+    setFormData({
+      name: property.name || '',
+      location: property.location || '',
+      price: property.price ? property.price.toString() : '',
+      image: property.image || '',
+      tags: Array.isArray(property.tags) ? property.tags.join(', ') : '',
+      is_featured: property.is_featured || false
+    });
+    setOpenDialog(true);
+  };
+
   return (
     <div className="p-6">
-      <div className="flex justify-between items-center mb-6">
-        <h1 className="text-2xl font-bold">Gerenciar Propriedades</h1>
-        <Dialog open={openDialog} onOpenChange={setOpenDialog}>
-          <DialogTrigger asChild>
-            <Button 
-              className="bg-nature-600 hover:bg-nature-700" 
-              onClick={() => {
-                resetForm();
-                setOpenDialog(true);
-              }}
-            >
-              <Plus className="h-4 w-4 mr-2" /> Nova Propriedade
-            </Button>
-          </DialogTrigger>
-          <DialogContent className="sm:max-w-[600px]">
-            <DialogHeader>
-              <DialogTitle>{editingProperty ? 'Editar' : 'Adicionar'} Propriedade</DialogTitle>
-              <DialogDescription>
-                Preencha os detalhes da propriedade abaixo.
-              </DialogDescription>
-            </DialogHeader>
-            <form onSubmit={handleSubmit}>
-              <div className="grid gap-4 py-4">
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="col-span-2">
-                    <Label htmlFor="name">Nome</Label>
-                    <Input
-                      id="name"
-                      name="name"
-                      value={formData.name}
-                      onChange={handleInputChange}
-                      required
-                    />
-                  </div>
-                  <div className="col-span-1">
-                    <Label htmlFor="location">Localização</Label>
-                    <Input
-                      id="location"
-                      name="location"
-                      value={formData.location}
-                      onChange={handleInputChange}
-                      required
-                    />
-                  </div>
-                  <div className="col-span-1">
-                    <Label htmlFor="price">Preço (R$)</Label>
-                    <Input
-                      id="price"
-                      name="price"
-                      type="number"
-                      value={formData.price}
-                      onChange={handleInputChange}
-                      required
-                    />
-                  </div>
-                  <div className="col-span-2">
-                    <Label htmlFor="image">URL da Imagem</Label>
-                    <div className="flex gap-2">
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+        <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center mb-6 space-y-4 sm:space-y-0">
+          <div>
+            <h1 className="text-2xl font-bold">Gerenciar Propriedades</h1>
+            <TabsList className="mt-2">
+              <TabsTrigger value="properties">Propriedades</TabsTrigger>
+              <TabsTrigger value="scraping">Raspagem de Dados</TabsTrigger>
+            </TabsList>
+          </div>
+          
+          <Dialog open={openDialog} onOpenChange={setOpenDialog}>
+            <DialogTrigger asChild>
+              <Button 
+                className="bg-nature-600 hover:bg-nature-700" 
+                onClick={() => {
+                  resetForm();
+                  setOpenDialog(true);
+                }}
+              >
+                <Plus className="h-4 w-4 mr-2" /> Nova Propriedade
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="sm:max-w-[600px]">
+              <DialogHeader>
+                <DialogTitle>{editingProperty ? 'Editar' : 'Adicionar'} Propriedade</DialogTitle>
+                <DialogDescription>
+                  Preencha os detalhes da propriedade abaixo.
+                </DialogDescription>
+              </DialogHeader>
+              <form onSubmit={handleSubmit}>
+                <div className="grid gap-4 py-4">
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="col-span-2">
+                      <Label htmlFor="name">Nome</Label>
                       <Input
-                        id="image"
-                        name="image"
-                        value={formData.image}
+                        id="name"
+                        name="name"
+                        value={formData.name}
                         onChange={handleInputChange}
-                        placeholder="https://example.com/image.jpg"
+                        required
                       />
-                      <Button type="button" variant="outline" className="flex-shrink-0">
-                        <Image className="h-4 w-4 mr-2" />
-                        Upload
-                      </Button>
                     </div>
-                  </div>
-                  <div className="col-span-2">
-                    <Label htmlFor="tags">Tags (separadas por vírgula)</Label>
-                    <Input
-                      id="tags"
-                      name="tags"
-                      value={formData.tags}
-                      onChange={handleInputChange}
-                      placeholder="Café Colonial, Trilhas, Pousada"
-                    />
-                  </div>
-                  <div className="col-span-2 flex items-center space-x-2">
-                    <Checkbox
-                      id="is_featured"
-                      checked={formData.is_featured}
-                      onCheckedChange={handleCheckboxChange}
-                    />
-                    <Label htmlFor="is_featured">Destacar na página inicial</Label>
+                    <div className="col-span-1">
+                      <Label htmlFor="location">Localização</Label>
+                      <Input
+                        id="location"
+                        name="location"
+                        value={formData.location}
+                        onChange={handleInputChange}
+                        required
+                      />
+                    </div>
+                    <div className="col-span-1">
+                      <Label htmlFor="price">Preço (R$)</Label>
+                      <Input
+                        id="price"
+                        name="price"
+                        type="number"
+                        value={formData.price}
+                        onChange={handleInputChange}
+                        required
+                      />
+                    </div>
+                    <div className="col-span-2">
+                      <Label htmlFor="image">URL da Imagem</Label>
+                      <div className="flex gap-2">
+                        <Input
+                          id="image"
+                          name="image"
+                          value={formData.image}
+                          onChange={handleInputChange}
+                          placeholder="https://example.com/image.jpg"
+                        />
+                        <Button type="button" variant="outline" className="flex-shrink-0">
+                          <Image className="h-4 w-4 mr-2" />
+                          Upload
+                        </Button>
+                      </div>
+                    </div>
+                    <div className="col-span-2">
+                      <Label htmlFor="tags">Tags (separadas por vírgula)</Label>
+                      <Input
+                        id="tags"
+                        name="tags"
+                        value={formData.tags}
+                        onChange={handleInputChange}
+                        placeholder="Café Colonial, Trilhas, Pousada"
+                      />
+                    </div>
+                    <div className="col-span-2 flex items-center space-x-2">
+                      <Checkbox
+                        id="is_featured"
+                        checked={formData.is_featured}
+                        onCheckedChange={handleCheckboxChange}
+                      />
+                      <Label htmlFor="is_featured">Destacar na página inicial</Label>
+                    </div>
                   </div>
                 </div>
-              </div>
-              <DialogFooter>
-                <Button type="button" variant="outline" onClick={() => setOpenDialog(false)}>
-                  Cancelar
-                </Button>
-                <Button type="submit">Salvar</Button>
-              </DialogFooter>
-            </form>
-          </DialogContent>
-        </Dialog>
-      </div>
+                <DialogFooter>
+                  <Button type="button" variant="outline" onClick={() => setOpenDialog(false)}>
+                    Cancelar
+                  </Button>
+                  <Button type="submit">Salvar</Button>
+                </DialogFooter>
+              </form>
+            </DialogContent>
+          </Dialog>
+        </div>
 
-      <div className="bg-white rounded-md shadow">
-        {loading ? (
-          <div className="p-8 text-center">
-            <div className="animate-spin h-8 w-8 border-t-2 border-b-2 border-nature-600 rounded-full mx-auto"></div>
-            <p className="mt-4 text-muted-foreground">Carregando propriedades...</p>
+        <TabsContent value="properties">
+          <div className="bg-white rounded-md shadow">
+            {loading ? (
+              <div className="p-8 text-center">
+                <div className="animate-spin h-8 w-8 border-t-2 border-b-2 border-nature-600 rounded-full mx-auto"></div>
+                <p className="mt-4 text-muted-foreground">Carregando propriedades...</p>
+              </div>
+            ) : properties.length === 0 ? (
+              <div className="p-8 text-center">
+                <p className="text-muted-foreground">Nenhuma propriedade encontrada.</p>
+                <Button 
+                  className="mt-4 bg-nature-600 hover:bg-nature-700" 
+                  onClick={() => setOpenDialog(true)}
+                >
+                  <Plus className="h-4 w-4 mr-2" /> Adicionar Propriedade
+                </Button>
+              </div>
+            ) : (
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Nome</TableHead>
+                    <TableHead>Localização</TableHead>
+                    <TableHead>Preço</TableHead>
+                    <TableHead>Classificação</TableHead>
+                    <TableHead className="text-center">Destaque</TableHead>
+                    <TableHead>Ações</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {properties.map((property) => (
+                    <TableRow key={property.id}>
+                      <TableCell className="font-medium">{property.name}</TableCell>
+                      <TableCell>{property.location}</TableCell>
+                      <TableCell>R$ {property.price.toFixed(2)}</TableCell>
+                      <TableCell>
+                        {property.rating > 0 ? (
+                          <div className="flex items-center">
+                            <span className="text-amber-500">★</span>
+                            <span className="ml-1">{property.rating.toFixed(1)}</span>
+                            <span className="text-xs text-muted-foreground ml-1">
+                              ({property.review_count})
+                            </span>
+                          </div>
+                        ) : (
+                          <span className="text-muted-foreground text-sm">Sem avaliações</span>
+                        )}
+                      </TableCell>
+                      <TableCell className="text-center">
+                        {property.is_featured ? (
+                          <div className="bg-green-100 text-green-800 text-xs font-medium px-2 py-0.5 rounded-full inline-block">
+                            Sim
+                          </div>
+                        ) : (
+                          <div className="bg-gray-100 text-gray-800 text-xs font-medium px-2 py-0.5 rounded-full inline-block">
+                            Não
+                          </div>
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex space-x-2">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleEdit(property)}
+                          >
+                            <Edit className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleDelete(property.id)}
+                            className="text-red-500 hover:text-red-700 hover:bg-red-50"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            )}
           </div>
-        ) : properties.length === 0 ? (
-          <div className="p-8 text-center">
-            <p className="text-muted-foreground">Nenhuma propriedade encontrada.</p>
-            <Button 
-              className="mt-4 bg-nature-600 hover:bg-nature-700" 
-              onClick={() => setOpenDialog(true)}
-            >
-              <Plus className="h-4 w-4 mr-2" /> Adicionar Propriedade
-            </Button>
+        </TabsContent>
+        
+        <TabsContent value="scraping">
+          <div className="bg-white rounded-md shadow p-6">
+            <ScrapingTool onImportProperty={handleImportProperty} />
           </div>
-        ) : (
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Nome</TableHead>
-                <TableHead>Localização</TableHead>
-                <TableHead>Preço</TableHead>
-                <TableHead>Classificação</TableHead>
-                <TableHead className="text-center">Destaque</TableHead>
-                <TableHead>Ações</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {properties.map((property) => (
-                <TableRow key={property.id}>
-                  <TableCell className="font-medium">{property.name}</TableCell>
-                  <TableCell>{property.location}</TableCell>
-                  <TableCell>R$ {property.price.toFixed(2)}</TableCell>
-                  <TableCell>
-                    {property.rating > 0 ? (
-                      <div className="flex items-center">
-                        <span className="text-amber-500">★</span>
-                        <span className="ml-1">{property.rating.toFixed(1)}</span>
-                        <span className="text-xs text-muted-foreground ml-1">
-                          ({property.review_count})
-                        </span>
-                      </div>
-                    ) : (
-                      <span className="text-muted-foreground text-sm">Sem avaliações</span>
-                    )}
-                  </TableCell>
-                  <TableCell className="text-center">
-                    {property.is_featured ? (
-                      <div className="bg-green-100 text-green-800 text-xs font-medium px-2 py-0.5 rounded-full inline-block">
-                        Sim
-                      </div>
-                    ) : (
-                      <div className="bg-gray-100 text-gray-800 text-xs font-medium px-2 py-0.5 rounded-full inline-block">
-                        Não
-                      </div>
-                    )}
-                  </TableCell>
-                  <TableCell>
-                    <div className="flex space-x-2">
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => handleEdit(property)}
-                      >
-                        <Edit className="h-4 w-4" />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => handleDelete(property.id)}
-                        className="text-red-500 hover:text-red-700 hover:bg-red-50"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        )}
-      </div>
+        </TabsContent>
+      </Tabs>
     </div>
   );
 };
