@@ -1,9 +1,10 @@
 
 import React, { useState, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { Menu, X, MapPin, Calendar, ShoppingCart, User } from 'lucide-react';
+import { Menu, X, MapPin, Calendar, ShoppingCart } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
+import UserMenu from '@/components/UserMenu';
 
 const Navbar = () => {
   const [isScrolled, setIsScrolled] = useState(false);
@@ -36,7 +37,6 @@ const Navbar = () => {
     { icon: <MapPin className="h-5 w-5" />, path: '/map', label: 'Mapa' },
     { icon: <Calendar className="h-5 w-5" />, path: '/bookings', label: 'Reservas' },
     { icon: <ShoppingCart className="h-5 w-5" />, path: '/shop', label: 'Loja' },
-    { icon: <User className="h-5 w-5" />, path: '/profile', label: 'Perfil' },
   ];
 
   return (
@@ -80,7 +80,7 @@ const Navbar = () => {
             ))}
           </nav>
 
-          {/* Desktop Icon Links */}
+          {/* Desktop Icon Links and User Menu */}
           <div className="hidden md:flex items-center space-x-2">
             {iconLinks.map((link) => (
               <Link
@@ -97,9 +97,7 @@ const Navbar = () => {
                 {link.icon}
               </Link>
             ))}
-            <Button size="sm" variant="default" className="ml-2 bg-nature-600 hover:bg-nature-700">
-              Entrar
-            </Button>
+            <UserMenu />
           </div>
 
           {/* Mobile menu button */}
@@ -145,7 +143,7 @@ const Navbar = () => {
           </nav>
           
           <div className="border-t border-border pt-6">
-            <div className="grid grid-cols-4 gap-2">
+            <div className="grid grid-cols-3 gap-2">
               {iconLinks.map((link) => (
                 <Link
                   key={link.path}
@@ -159,10 +157,8 @@ const Navbar = () => {
             </div>
           </div>
           
-          <div className="mt-auto">
-            <Button className="w-full bg-nature-600 hover:bg-nature-700">
-              Entrar
-            </Button>
+          <div className="mt-auto flex justify-center">
+            <UserMenu />
           </div>
         </div>
       </div>
