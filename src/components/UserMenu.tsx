@@ -13,10 +13,10 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { LogOut, User, Settings, Heart, MapPin } from 'lucide-react';
+import { LogOut, User, Settings, Heart, MapPin, LayoutDashboard } from 'lucide-react';
 
 const UserMenu = () => {
-  const { user, signOut } = useAuth();
+  const { user, signOut, isAdmin } = useAuth();
 
   if (!user) {
     return (
@@ -63,6 +63,14 @@ const UserMenu = () => {
         </DropdownMenuLabel>
         <DropdownMenuSeparator />
         <DropdownMenuGroup>
+          {isAdmin && (
+            <DropdownMenuItem asChild>
+              <Link to="/admin">
+                <LayoutDashboard className="mr-2 h-4 w-4 text-nature-600" />
+                <span>Painel Admin</span>
+              </Link>
+            </DropdownMenuItem>
+          )}
           <DropdownMenuItem asChild>
             <Link to="/profile">
               <User className="mr-2 h-4 w-4" />

@@ -9,16 +9,126 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
-      [_ in never]: never
+      experiences: {
+        Row: {
+          category: string | null
+          created_at: string
+          description: string
+          duration: string
+          id: string
+          image: string | null
+          price: number
+          rating: number | null
+          review_count: number | null
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          category?: string | null
+          created_at?: string
+          description: string
+          duration: string
+          id?: string
+          image?: string | null
+          price: number
+          rating?: number | null
+          review_count?: number | null
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          category?: string | null
+          created_at?: string
+          description?: string
+          duration?: string
+          id?: string
+          image?: string | null
+          price?: number
+          rating?: number | null
+          review_count?: number | null
+          title?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      properties: {
+        Row: {
+          created_at: string
+          id: string
+          image: string | null
+          is_featured: boolean | null
+          location: string
+          name: string
+          price: number
+          rating: number | null
+          review_count: number | null
+          tags: string[] | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          image?: string | null
+          is_featured?: boolean | null
+          location: string
+          name: string
+          price: number
+          rating?: number | null
+          review_count?: number | null
+          tags?: string[] | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          image?: string | null
+          is_featured?: boolean | null
+          location?: string
+          name?: string
+          price?: number
+          rating?: number | null
+          review_count?: number | null
+          tags?: string[] | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      user_roles: {
+        Row: {
+          created_at: string
+          id: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      has_role: {
+        Args: {
+          _user_id: string
+          _role: Database["public"]["Enums"]["app_role"]
+        }
+        Returns: boolean
+      }
     }
     Enums: {
-      [_ in never]: never
+      app_role: "admin" | "user"
     }
     CompositeTypes: {
       [_ in never]: never

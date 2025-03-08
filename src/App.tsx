@@ -6,6 +6,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "@/contexts/AuthContext";
 import ProtectedRoute from "@/components/ProtectedRoute";
+import AdminLayout from "@/components/AdminLayout";
 
 // Pages
 import Index from "./pages/Index";
@@ -22,6 +23,15 @@ import Register from "./pages/auth/Register";
 import VerifyEmail from "./pages/auth/VerifyEmail";
 import ForgotPassword from "./pages/auth/ForgotPassword";
 import ResetPassword from "./pages/auth/ResetPassword";
+
+// Admin Pages
+import AdminDashboard from "./pages/admin/Dashboard";
+import AdminProperties from "./pages/admin/Properties";
+import AdminExperiences from "./pages/admin/Experiences";
+import AdminUsers from "./pages/admin/Users";
+import AdminBookings from "./pages/admin/Bookings";
+import AdminMessages from "./pages/admin/Messages";
+import AdminSettings from "./pages/admin/Settings";
 
 const queryClient = new QueryClient();
 
@@ -55,6 +65,15 @@ const App = () => (
             <Route path="/settings" element={<ProtectedRoute><div>Configurações</div></ProtectedRoute>} />
             <Route path="/bookings" element={<ProtectedRoute><div>Reservas</div></ProtectedRoute>} />
             <Route path="/shop" element={<ProtectedRoute><div>Loja</div></ProtectedRoute>} />
+            
+            {/* Rotas de administração */}
+            <Route path="/admin" element={<ProtectedRoute><AdminLayout><AdminDashboard /></AdminLayout></ProtectedRoute>} />
+            <Route path="/admin/properties" element={<ProtectedRoute><AdminLayout><AdminProperties /></AdminLayout></ProtectedRoute>} />
+            <Route path="/admin/experiences" element={<ProtectedRoute><AdminLayout><AdminExperiences /></AdminLayout></ProtectedRoute>} />
+            <Route path="/admin/users" element={<ProtectedRoute><AdminLayout><AdminUsers /></AdminLayout></ProtectedRoute>} />
+            <Route path="/admin/bookings" element={<ProtectedRoute><AdminLayout><AdminBookings /></AdminLayout></ProtectedRoute>} />
+            <Route path="/admin/messages" element={<ProtectedRoute><AdminLayout><AdminMessages /></AdminLayout></ProtectedRoute>} />
+            <Route path="/admin/settings" element={<ProtectedRoute><AdminLayout><AdminSettings /></AdminLayout></ProtectedRoute>} />
             
             {/* Rota de fallback */}
             <Route path="*" element={<NotFound />} />
