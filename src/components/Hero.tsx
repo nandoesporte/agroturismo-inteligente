@@ -4,6 +4,7 @@ import { ArrowRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import SearchBar from './SearchBar';
 import { motion } from 'framer-motion';
+import { Link } from 'react-router-dom';
 
 const Hero = () => {
   const [currentSlide, setCurrentSlide] = useState(0);
@@ -16,12 +17,12 @@ const Hero = () => {
       subtitle: 'Experiências autênticas em meio à natureza e cultura rural'
     },
     {
-      image: 'https://images.unsplash.com/photo-1515256722043-0991db08e6af?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=2070&q=80',
+      image: 'https://images.unsplash.com/photo-1464278533981-50e57c3a85bf?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=2070&q=80',
       title: 'Sabores da Terra',
       subtitle: 'Conheça as delícias da gastronomia rural paranaense'
     },
     {
-      image: 'https://images.unsplash.com/photo-1625592318868-c1e4aa2b3b33?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=2070&q=80',
+      image: 'https://images.unsplash.com/photo-1501554728187-ce583db33af7?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=2070&q=80',
       title: 'Paisagens Deslumbrantes',
       subtitle: 'Caminhos e trilhas para se conectar com a natureza'
     },
@@ -75,6 +76,10 @@ const Hero = () => {
             src={slide.image}
             alt={slide.title}
             className="h-full w-full object-cover object-center"
+            onError={(e) => {
+              const target = e.target as HTMLImageElement;
+              target.src = "https://images.unsplash.com/photo-1501554728187-ce583db33af7?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=2070&q=80";
+            }}
           />
         </div>
       ))}
@@ -128,12 +133,25 @@ const Hero = () => {
             <SearchBar className="mb-8" />
             
             <div className="flex flex-col sm:flex-row gap-4 justify-center mt-8">
-              <Button size="lg" className="bg-nature-600 hover:bg-nature-700 text-white shadow-md">
-                Explorar Propriedades
-                <ArrowRight className="ml-2 h-4 w-4" />
+              <Button 
+                size="lg" 
+                className="bg-nature-600 hover:bg-nature-700 text-white shadow-md"
+                asChild
+              >
+                <Link to="/properties">
+                  Explorar Propriedades
+                  <ArrowRight className="ml-2 h-4 w-4" />
+                </Link>
               </Button>
-              <Button size="lg" variant="outline" className="bg-white/10 hover:bg-white/20 text-white border-white/30 backdrop-blur-sm">
-                Como Funciona
+              <Button 
+                size="lg" 
+                variant="outline" 
+                className="bg-white/10 hover:bg-white/20 text-white border-white/30 backdrop-blur-sm"
+                asChild
+              >
+                <Link to="/about">
+                  Como Funciona
+                </Link>
               </Button>
             </div>
           </motion.div>

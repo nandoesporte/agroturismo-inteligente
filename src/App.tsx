@@ -32,6 +32,7 @@ import AdminUsers from "./pages/admin/Users";
 import AdminBookings from "./pages/admin/Bookings";
 import AdminMessages from "./pages/admin/Messages";
 import AdminSettings from "./pages/admin/Settings";
+import AdminHeroSlides from "./pages/admin/HeroSlides";
 
 // Adicionar animações
 import { MotionConfig } from 'framer-motion';
@@ -79,6 +80,7 @@ const App = () => (
               <Route path="/admin/bookings" element={<ProtectedRoute><AdminLayout><AdminBookings /></AdminLayout></ProtectedRoute>} />
               <Route path="/admin/messages" element={<ProtectedRoute><AdminLayout><AdminMessages /></AdminLayout></ProtectedRoute>} />
               <Route path="/admin/settings" element={<ProtectedRoute><AdminLayout><AdminSettings /></AdminLayout></ProtectedRoute>} />
+              <Route path="/admin/hero-slides" element={<ProtectedRoute><AdminLayout><AdminHeroSlides /></AdminLayout></ProtectedRoute>} />
               
               {/* Rota de fallback */}
               <Route path="*" element={<NotFound />} />
