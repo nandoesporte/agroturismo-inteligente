@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardFooter } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -50,7 +51,7 @@ const PropertyCard = ({
         className
       )}
     >
-      <Link to={`/property/${property.id}`}>
+      <Link to={`/properties/${property.id}`}>
         <div className="relative">
           <img
             src={property.image}
