@@ -26,9 +26,9 @@ export class FirecrawlService {
     try {
       console.log('Making scrape request to Zyte Edge Function');
       
+      // Update: Remove the timeout option as it's not supported in FunctionInvokeOptions
       const { data, error } = await supabase.functions.invoke('firecrawl', {
-        body: { url },
-        timeout: 20000 // 20 seconds timeout
+        body: { url }
       });
 
       if (error) {
