@@ -122,6 +122,7 @@ const Chatbot = ({ isMobile = false }: ChatbotProps) => {
   const [isExpanded, setIsExpanded] = useState(true);
   const [currentTypingIndex, setCurrentTypingIndex] = useState<number | null>(0);
   const [isLoading, setIsLoading] = useState(false);
+  const [finishedMessages, setFinishedMessages] = useState<number[]>([]);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
   const chatContainerRef = useRef<HTMLDivElement>(null);
@@ -230,6 +231,7 @@ const Chatbot = ({ isMobile = false }: ChatbotProps) => {
       };
       
       setMessages(prev => [...prev, errorResponse]);
+      setCurrentTypingIndex(messages.length + 1);
     } finally {
       setIsTyping(false);
       setIsLoading(false);
@@ -256,9 +258,14 @@ const Chatbot = ({ isMobile = false }: ChatbotProps) => {
   };
 
   const handleTypingComplete = (messageIndex: number) => {
+    // Add this message to the list of finished ones
+    setFinishedMessages(prev => [...prev, messageIndex]);
+    
+    // If this was the last message, clear the current typing index
     if (messageIndex === messages.length - 1) {
       setCurrentTypingIndex(null);
     } else {
+      // Move to the next message
       setCurrentTypingIndex(messageIndex + 1);
     }
   };
@@ -379,7 +386,10 @@ const Chatbot = ({ isMobile = false }: ChatbotProps) => {
                       onComplete={() => handleTypingComplete(index)}
                     />
                   ) : (
-                    index < (currentTypingIndex || 0) ? renderMessageWithLinks(message.text) : ""
+                    // Only show message if it's a user message or if it's finished typing
+                    (message.sender === 'user' || finishedMessages.includes(index)) 
+                      ? renderMessageWithLinks(message.text) 
+                      : ""
                   )}
                 </div>
                 <div className="text-right mt-1">
