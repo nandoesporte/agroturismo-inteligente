@@ -126,18 +126,23 @@ const AdminProperties = () => {
     e.preventDefault();
     
     try {
+      // Verifica se o preço é um número válido
+      if (isNaN(parseFloat(formData.price)) || parseFloat(formData.price) < 0) {
+        throw new Error('O preço deve ser um número válido e positivo');
+      }
+      
       const propertyData = {
-        name: formData.name,
-        location: formData.location,
+        name: formData.name.trim(),
+        location: formData.location.trim(),
         price: parseFloat(formData.price),
-        image: formData.image,
+        image: formData.image.trim(),
         tags: formData.tags.split(',').map(tag => tag.trim()).filter(tag => tag),
         amenities: formData.amenities.split(',').map(amenity => amenity.trim()).filter(amenity => amenity),
-        hours: formData.hours,
+        hours: formData.hours.trim(),
         contact: {
-          phone: formData.contact_phone,
-          email: formData.contact_email,
-          website: formData.contact_website
+          phone: formData.contact_phone.trim(),
+          email: formData.contact_email.trim(),
+          website: formData.contact_website.trim()
         },
         is_featured: formData.is_featured
       };
@@ -173,6 +178,7 @@ const AdminProperties = () => {
       fetchProperties();
       resetForm();
     } catch (error: any) {
+      console.error('Erro ao salvar propriedade:', error);
       toast({
         title: "Erro ao salvar",
         description: error.message,
@@ -242,7 +248,7 @@ const AdminProperties = () => {
   };
 
   return (
-    <div className="p-6">
+    <div className="p-4 md:p-6">
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
         <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center mb-6 space-y-4 sm:space-y-0">
           <div>
@@ -265,7 +271,7 @@ const AdminProperties = () => {
                 <Plus className="h-4 w-4 mr-2" /> Nova Propriedade
               </Button>
             </DialogTrigger>
-            <DialogContent className="sm:max-w-[700px]">
+            <DialogContent className="sm:max-w-[700px] max-h-[90vh] overflow-y-auto">
               <DialogHeader>
                 <DialogTitle>{editingProperty ? 'Editar' : 'Adicionar'} Propriedade</DialogTitle>
                 <DialogDescription>
@@ -274,8 +280,8 @@ const AdminProperties = () => {
               </DialogHeader>
               <form onSubmit={handleSubmit}>
                 <div className="grid gap-4 py-4">
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="col-span-2">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="col-span-1 md:col-span-2">
                       <Label htmlFor="name">Nome</Label>
                       <Input
                         id="name"
@@ -301,14 +307,16 @@ const AdminProperties = () => {
                         id="price"
                         name="price"
                         type="number"
+                        min="0"
+                        step="0.01"
                         value={formData.price}
                         onChange={handleInputChange}
                         required
                       />
                     </div>
-                    <div className="col-span-2">
+                    <div className="col-span-1 md:col-span-2">
                       <Label htmlFor="image">URL da Imagem</Label>
-                      <div className="flex gap-2">
+                      <div className="flex gap-2 flex-col sm:flex-row">
                         <Input
                           id="image"
                           name="image"
@@ -342,7 +350,7 @@ const AdminProperties = () => {
                         placeholder="Wi-Fi, Estacionamento, Café da manhã"
                       />
                     </div>
-                    <div className="col-span-2">
+                    <div className="col-span-1 md:col-span-2">
                       <Label htmlFor="hours">Horário de Funcionamento</Label>
                       <Input
                         id="hours"
@@ -354,9 +362,9 @@ const AdminProperties = () => {
                     </div>
                     
                     {/* Contact Information */}
-                    <div className="col-span-2">
+                    <div className="col-span-1 md:col-span-2">
                       <h3 className="text-sm font-medium mb-2">Informações de Contato</h3>
-                      <div className="grid grid-cols-3 gap-3">
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
                         <div>
                           <Label htmlFor="contact_phone">Telefone</Label>
                           <div className="flex">
@@ -403,7 +411,7 @@ const AdminProperties = () => {
                       </div>
                     </div>
                     
-                    <div className="col-span-2 flex items-center space-x-2">
+                    <div className="col-span-1 md:col-span-2 flex items-center space-x-2">
                       <Checkbox
                         id="is_featured"
                         checked={formData.is_featured}
@@ -413,7 +421,7 @@ const AdminProperties = () => {
                     </div>
                   </div>
                 </div>
-                <DialogFooter>
+                <DialogFooter className="flex-col sm:flex-row gap-2">
                   <Button type="button" variant="outline" onClick={() => setOpenDialog(false)}>
                     Cancelar
                   </Button>
@@ -425,7 +433,7 @@ const AdminProperties = () => {
         </div>
 
         <TabsContent value="properties">
-          <div className="bg-white rounded-md shadow">
+          <div className="bg-white rounded-md shadow overflow-x-auto">
             {loading ? (
               <div className="p-8 text-center">
                 <div className="animate-spin h-8 w-8 border-t-2 border-b-2 border-nature-600 rounded-full mx-auto"></div>
@@ -445,21 +453,27 @@ const AdminProperties = () => {
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Nome</TableHead>
-                    <TableHead>Localização</TableHead>
+                    <TableHead className="hidden md:table-cell">Nome</TableHead>
+                    <TableHead className="hidden sm:table-cell">Localização</TableHead>
                     <TableHead>Preço</TableHead>
-                    <TableHead>Classificação</TableHead>
-                    <TableHead className="text-center">Destaque</TableHead>
+                    <TableHead className="hidden lg:table-cell">Classificação</TableHead>
+                    <TableHead className="text-center hidden sm:table-cell">Destaque</TableHead>
                     <TableHead>Ações</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {properties.map((property) => (
                     <TableRow key={property.id}>
-                      <TableCell className="font-medium">{property.name}</TableCell>
-                      <TableCell>{property.location}</TableCell>
-                      <TableCell>R$ {property.price.toFixed(2)}</TableCell>
+                      <TableCell className="font-medium md:table-cell">
+                        <div className="md:hidden font-bold mb-1">Nome:</div>
+                        {property.name}
+                      </TableCell>
+                      <TableCell className="hidden sm:table-cell">{property.location}</TableCell>
                       <TableCell>
+                        <div className="sm:hidden font-bold mb-1">Preço:</div>
+                        R$ {property.price.toFixed(2)}
+                      </TableCell>
+                      <TableCell className="hidden lg:table-cell">
                         {property.rating > 0 ? (
                           <div className="flex items-center">
                             <span className="text-amber-500">★</span>
@@ -472,7 +486,7 @@ const AdminProperties = () => {
                           <span className="text-muted-foreground text-sm">Sem avaliações</span>
                         )}
                       </TableCell>
-                      <TableCell className="text-center">
+                      <TableCell className="text-center hidden sm:table-cell">
                         {property.is_featured ? (
                           <div className="bg-green-100 text-green-800 text-xs font-medium px-2 py-0.5 rounded-full inline-block">
                             Sim
@@ -489,6 +503,7 @@ const AdminProperties = () => {
                             variant="ghost"
                             size="sm"
                             onClick={() => handleEdit(property)}
+                            title="Editar"
                           >
                             <Edit className="h-4 w-4" />
                           </Button>
@@ -497,6 +512,7 @@ const AdminProperties = () => {
                             size="sm"
                             onClick={() => handleDelete(property.id)}
                             className="text-red-500 hover:text-red-700 hover:bg-red-50"
+                            title="Excluir"
                           >
                             <Trash2 className="h-4 w-4" />
                           </Button>
@@ -511,7 +527,7 @@ const AdminProperties = () => {
         </TabsContent>
         
         <TabsContent value="scraping">
-          <div className="bg-white rounded-md shadow p-6">
+          <div className="bg-white rounded-md shadow p-4 md:p-6">
             <ScrapingTool onImportProperty={handleImportProperty} />
           </div>
         </TabsContent>

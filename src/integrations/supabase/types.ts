@@ -53,7 +53,10 @@ export type Database = {
       }
       properties: {
         Row: {
+          amenities: string[] | null
+          contact: Json | null
           created_at: string
+          hours: string | null
           id: string
           image: string | null
           is_featured: boolean | null
@@ -66,7 +69,10 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          amenities?: string[] | null
+          contact?: Json | null
           created_at?: string
+          hours?: string | null
           id?: string
           image?: string | null
           is_featured?: boolean | null
@@ -79,7 +85,10 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          amenities?: string[] | null
+          contact?: Json | null
           created_at?: string
+          hours?: string | null
           id?: string
           image?: string | null
           is_featured?: boolean | null
