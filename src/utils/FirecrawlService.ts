@@ -41,9 +41,18 @@ export class FirecrawlService {
       console.log('Scrape successful using endpoint:', data.endpoint);
       console.log('Properties found:', data.properties?.length || 0);
       
+      // Normalize empty arrays to prevent UI issues
+      const properties = data.properties && data.properties.length > 0
+        ? data.properties.map((property: ExtractedProperty) => ({
+            ...property,
+            activities: property.activities || [],
+            contact: property.contact || { phone: '', email: '', website: '' }
+          }))
+        : [];
+        
       return { 
         success: true,
-        properties: data.properties,
+        properties,
         rawData: data.rawData,
         endpoint: data.endpoint
       };

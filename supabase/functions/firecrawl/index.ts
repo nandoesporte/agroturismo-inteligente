@@ -48,9 +48,38 @@ serve(async (req) => {
 
     console.log(`Scraping data from URL: ${url}`);
 
-    // Using the API endpoint according to docs: https://docs.firecrawl.dev/introduction
+    // Official API endpoint from docs: https://docs.firecrawl.dev/introduction
     const firecrawlUrl = "https://api.firecrawl.dev/extract";
     console.log(`Making request to Firecrawl API endpoint: ${firecrawlUrl}`);
+    
+    const selector = {
+      properties: {
+        selector: "div.property-card, div.listing-item, article.property, .property-listing, .destination-item, .product-card, .tour-item, .accommodation-item, .card, .item, .product",
+        type: "list",
+        properties: {
+          name: "h1, h2, h3, h4, .title, .name, .heading",
+          description: "p, .description, .excerpt, .summary, .text",
+          location: ".location, .address, .place, .region",
+          price: ".price, .cost, .value",
+          image: {
+            selector: "img",
+            type: "attribute",
+            attribute: "src"
+          },
+          contact: {
+            properties: {
+              phone: ".phone, [href^='tel:'], .telephone, .contact",
+              email: ".email, [href^='mailto:']",
+              website: {
+                selector: "a.website, a.site, .external-link, a[href^='http']",
+                type: "attribute",
+                attribute: "href"
+              }
+            }
+          }
+        }
+      }
+    };
     
     const firecrawlResponse = await fetch(firecrawlUrl, {
       method: "POST",
@@ -60,34 +89,7 @@ serve(async (req) => {
       },
       body: JSON.stringify({
         url: url,
-        selectors: {
-          properties: {
-            selector: "div.property-card, div.listing-item, article.property, .property-listing, .destination-item, .product-card, .tour-item, .accommodation-item, .card, .item, .product",
-            type: "list",
-            properties: {
-              name: "h1, h2, h3, h4, .title, .name, .heading",
-              description: "p, .description, .excerpt, .summary, .text",
-              location: ".location, .address, .place, .region",
-              price: ".price, .cost, .value",
-              image: {
-                selector: "img",
-                type: "attribute",
-                attribute: "src"
-              },
-              contact: {
-                properties: {
-                  phone: ".phone, [href^='tel:'], .telephone, .contact",
-                  email: ".email, [href^='mailto:']",
-                  website: {
-                    selector: "a.website, a.site, .external-link, a[href^='http']",
-                    type: "attribute",
-                    attribute: "href"
-                  }
-                }
-              }
-            }
-          }
-        }
+        selectors: selector
       })
     });
 
@@ -95,15 +97,14 @@ serve(async (req) => {
       const errorText = await firecrawlResponse.text();
       console.error("Firecrawl API error:", errorText);
       console.error("Status code:", firecrawlResponse.status);
-      console.error("Status text:", firecrawlResponse.statusText);
       
-      // Try the alternative endpoint format as per documentation
-      console.log("Attempting alternative API endpoint...");
+      // Fallback to the v2 endpoint
+      console.log("Attempting v2 API endpoint...");
       
-      const alternativeUrl = "https://api.firecrawl.dev/api/v1/extract";
-      console.log(`Making alternative request to: ${alternativeUrl}`);
+      const v2Url = "https://api.firecrawl.dev/api/v2/extract";
+      console.log(`Making v2 request to: ${v2Url}`);
       
-      const alternativeResponse = await fetch(alternativeUrl, {
+      const v2Response = await fetch(v2Url, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -111,124 +112,29 @@ serve(async (req) => {
         },
         body: JSON.stringify({
           url: url,
-          selectors: {
-            properties: {
-              selector: "div.property-card, div.listing-item, article.property, .property-listing, .destination-item, .product-card, .tour-item, .accommodation-item, .card, .item, .product",
-              type: "list",
-              properties: {
-                name: "h1, h2, h3, h4, .title, .name, .heading",
-                description: "p, .description, .excerpt, .summary, .text",
-                location: ".location, .address, .place, .region",
-                price: ".price, .cost, .value",
-                image: {
-                  selector: "img",
-                  type: "attribute",
-                  attribute: "src"
-                },
-                contact: {
-                  properties: {
-                    phone: ".phone, [href^='tel:'], .telephone, .contact",
-                    email: ".email, [href^='mailto:']",
-                    website: {
-                      selector: "a.website, a.site, .external-link, a[href^='http']",
-                      type: "attribute",
-                      attribute: "href"
-                    }
-                  }
-                }
-              }
-            }
-          }
+          selectors: selector
         })
       });
       
-      if (!alternativeResponse.ok) {
-        const alternativeError = await alternativeResponse.text();
-        console.error("Alternative API error:", alternativeError);
-        console.error("Alternative status code:", alternativeResponse.status);
+      if (!v2Response.ok) {
+        const v2Error = await v2Response.text();
+        console.error("V2 API error:", v2Error);
         
-        // One more attempt with the v2 endpoint as per latest docs
-        console.log("Attempting v2 API endpoint...");
-        
-        const v2Url = "https://api.firecrawl.dev/api/v2/extract";
-        console.log(`Making v2 request to: ${v2Url}`);
-        
-        const v2Response = await fetch(v2Url, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            "Authorization": `Bearer ${FIRECRAWL_API_KEY}`
-          },
-          body: JSON.stringify({
-            url: url,
-            selectors: {
-              properties: {
-                selector: "div.property-card, div.listing-item, article.property, .property-listing, .destination-item, .product-card, .tour-item, .accommodation-item, .card, .item, .product",
-                type: "list",
-                properties: {
-                  name: "h1, h2, h3, h4, .title, .name, .heading",
-                  description: "p, .description, .excerpt, .summary, .text",
-                  location: ".location, .address, .place, .region",
-                  price: ".price, .cost, .value",
-                  image: {
-                    selector: "img",
-                    type: "attribute",
-                    attribute: "src"
-                  },
-                  contact: {
-                    properties: {
-                      phone: ".phone, [href^='tel:'], .telephone, .contact",
-                      email: ".email, [href^='mailto:']",
-                      website: {
-                        selector: "a.website, a.site, .external-link, a[href^='http']",
-                        type: "attribute",
-                        attribute: "href"
-                      }
-                    }
-                  }
-                }
-              }
-            }
-          })
-        });
-        
-        if (!v2Response.ok) {
-          const v2Error = await v2Response.text();
-          console.error("V2 API error:", v2Error);
-          throw new Error(`Firecrawl API error: All endpoints failed. Last error: ${v2Error}`);
-        }
-        
-        const v2Data = await v2Response.json();
-        console.log("Received v2 response:", JSON.stringify(v2Data, null, 2));
-        
-        // Process and clean the extracted data from v2
-        const extractedProperties: ExtractedProperty[] = processResponseData(v2Data);
-        
-        return new Response(
-          JSON.stringify({ 
-            success: true, 
-            properties: extractedProperties,
-            rawData: v2Data,
-            endpoint: "v2"
-          }),
-          { 
-            headers: { ...corsHeaders, "Content-Type": "application/json" } 
-          }
-        );
+        throw new Error(`Firecrawl API error: Could not connect to any endpoint. Last error: ${v2Error}`);
       }
       
-      const alternativeData = await alternativeResponse.json();
-      console.log("Received alternative response:", JSON.stringify(alternativeData, null, 2));
+      const v2Data = await v2Response.json();
+      console.log("Received v2 response:", JSON.stringify(v2Data, null, 2));
       
-      // Process and clean the extracted data from alternative
-      const extractedProperties: ExtractedProperty[] = processResponseData(alternativeData);
+      // Process the extracted data
+      const extractedProperties: ExtractedProperty[] = processResponseData(v2Data);
       
       return new Response(
         JSON.stringify({ 
           success: true, 
           properties: extractedProperties,
-          rawData: alternativeData,
-          endpoint: "alternative"
+          rawData: v2Data,
+          endpoint: "v2"
         }),
         { 
           headers: { ...corsHeaders, "Content-Type": "application/json" } 
@@ -269,9 +175,27 @@ serve(async (req) => {
 function processResponseData(data: any): ExtractedProperty[] {
   const extractedProperties: ExtractedProperty[] = [];
   
-  // Handle different response formats that might be returned by different API versions
-  if (data && data.properties && Array.isArray(data.properties)) {
-    // Handle v1/alternative endpoint format
+  // Handle different response formats
+  if (data && data.data && Array.isArray(data.data.properties)) {
+    // Handle v2 format
+    data.data.properties.forEach((prop: any) => {
+      const property: ExtractedProperty = {
+        name: prop.name || '',
+        description: prop.description || '',
+        location: prop.location || '',
+        price: prop.price || '',
+        image: prop.image || '',
+        contact: {
+          phone: prop.contact?.phone || '',
+          email: prop.contact?.email || '',
+          website: prop.contact?.website || ''
+        }
+      };
+      
+      extractedProperties.push(property);
+    });
+  } else if (data && Array.isArray(data.properties)) {
+    // Handle direct properties array format
     data.properties.forEach((prop: any) => {
       const property: ExtractedProperty = {
         name: prop.name || '',
@@ -289,7 +213,7 @@ function processResponseData(data: any): ExtractedProperty[] {
       extractedProperties.push(property);
     });
   } else if (data && data.results && Array.isArray(data.results)) {
-    // Handle primary endpoint format
+    // Handle primary endpoint format with results array
     data.results.forEach((item: any) => {
       if (item.properties && Array.isArray(item.properties)) {
         item.properties.forEach((prop: any) => {
@@ -300,9 +224,9 @@ function processResponseData(data: any): ExtractedProperty[] {
             price: prop.price || '',
             image: prop.image || '',
             contact: {
-              phone: prop.contactPhone || '',
-              email: prop.contactEmail || '',
-              website: prop.contactWebsite || ''
+              phone: prop.contact?.phone || '',
+              email: prop.contact?.email || '',
+              website: prop.contact?.website || ''
             }
           };
           
@@ -310,24 +234,56 @@ function processResponseData(data: any): ExtractedProperty[] {
         });
       }
     });
-  } else if (data && data.data && Array.isArray(data.data)) {
-    // Handle a possible v2 format where data is nested under a data key
-    data.data.forEach((prop: any) => {
-      const property: ExtractedProperty = {
-        name: prop.name || prop.title || '',
-        description: prop.description || prop.content || '',
-        location: prop.location || prop.address || '',
-        price: prop.price || '',
-        image: prop.image || prop.thumbnail || '',
-        contact: {
-          phone: prop.contact?.phone || prop.phone || '',
-          email: prop.contact?.email || prop.email || '',
-          website: prop.contact?.website || prop.website || ''
-        }
-      };
+  } else if (data && data.content) {
+    // Handle simple content format
+    try {
+      // Try to parse any JSON content that might be embedded
+      const parsedContent = typeof data.content === 'string' 
+        ? JSON.parse(data.content) 
+        : data.content;
       
-      extractedProperties.push(property);
-    });
+      if (Array.isArray(parsedContent)) {
+        parsedContent.forEach((item: any) => {
+          const property: ExtractedProperty = {
+            name: item.name || item.title || '',
+            description: item.description || item.content || '',
+            location: item.location || item.address || '',
+            price: item.price || '',
+            image: item.image || item.thumbnail || '',
+            contact: {
+              phone: item.contact?.phone || item.phone || '',
+              email: item.contact?.email || item.email || '',
+              website: item.contact?.website || item.website || ''
+            }
+          };
+          
+          extractedProperties.push(property);
+        });
+      }
+    } catch (e) {
+      console.error("Error parsing content:", e);
+    }
+  }
+  
+  // If no properties were found, try a more general approach
+  if (extractedProperties.length === 0) {
+    console.log("No properties found in structured format, attempting general extraction");
+    
+    // Create at least one generic property with whatever data we have
+    const property: ExtractedProperty = {
+      name: data.title || 'Extracted Property',
+      description: data.content || data.description || '',
+      location: data.location || '',
+      price: '',
+      image: data.image || '',
+      contact: {
+        phone: '',
+        email: '',
+        website: ''
+      }
+    };
+    
+    extractedProperties.push(property);
   }
   
   return extractedProperties;
