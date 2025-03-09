@@ -48,7 +48,6 @@ serve(async (req) => {
 
     console.log(`Scraping data from URL: ${url}`);
 
-    // Use the correct Zyte API endpoint
     // Primary and fallback endpoints
     const endpoints = [
       "https://api.zyte.com/v1/extract", 
@@ -64,11 +63,29 @@ serve(async (req) => {
       try {
         console.log(`Attempting to connect to Zyte API endpoint: ${endpoint}`);
         
-        // Prepare the request for Zyte API with improved selectors
+        // Updated request structure for Zyte API
         const zytePayload = {
           url: url,
-          extractFrom: {
-            propertyListings: {
+          browserHtml: true,
+          // Using the correct schema structure based on Zyte API docs
+          article: {
+            headline: true,
+            datePublished: true,
+            author: true,
+            description: true,
+            text: true,
+            image: true
+          },
+          product: {
+            name: true,
+            description: true,
+            price: true,
+            images: true
+          },
+          // For tourism and property sites, using the correct selectors
+          additionalSelectors: [
+            {
+              name: "propertyInfo",
               selector: [
                 "div.property-card",
                 "div.listing-item",
@@ -86,49 +103,50 @@ serve(async (req) => {
                 ".farm-experience",
                 ".rural-lodging",
                 ".agritourism-item"
-              ]
+              ],
+              type: "group",
+              extractors: {
+                name: {
+                  selector: ["h1", "h2", "h3", "h4", ".title", ".name", ".heading", ".product-title"],
+                  type: "text"
+                },
+                description: {
+                  selector: ["p", ".description", ".excerpt", ".summary", ".text", ".info", ".details", ".content"],
+                  type: "text"
+                },
+                location: {
+                  selector: [".location", ".address", ".place", ".region", ".city", ".area", "[itemprop='address']"],
+                  type: "text"
+                },
+                price: {
+                  selector: [".price", ".cost", ".value", ".rate", ".amount", "[itemprop='price']"],
+                  type: "text"
+                },
+                image: {
+                  selector: ["img", ".image", ".photo", ".picture", "[itemprop='image']"],
+                  type: "attribute",
+                  attribute: "src"
+                },
+                activities: {
+                  selector: [".activities", ".features", ".amenities", ".tags", ".category", ".attractions"],
+                  type: "list"
+                },
+                contactPhone: {
+                  selector: [".phone", "[href^='tel:']", ".telephone", ".contact", "[itemprop='telephone']"],
+                  type: "text"
+                },
+                contactEmail: {
+                  selector: [".email", "[href^='mailto:']", "[itemprop='email']"],
+                  type: "text"
+                },
+                contactWebsite: {
+                  selector: ["a.website", "a.site", ".external-link", "a[href^='http']", "[itemprop='url']"],
+                  type: "attribute",
+                  attribute: "href"
+                }
+              }
             }
-          },
-          extract: {
-            name: {
-              selector: ["h1", "h2", "h3", "h4", ".title", ".name", ".heading", ".product-title"],
-              type: "text"
-            },
-            description: {
-              selector: ["p", ".description", ".excerpt", ".summary", ".text", ".info", ".details", ".content"],
-              type: "text"
-            },
-            location: {
-              selector: [".location", ".address", ".place", ".region", ".city", ".area", "[itemprop='address']"],
-              type: "text"
-            },
-            price: {
-              selector: [".price", ".cost", ".value", ".rate", ".amount", "[itemprop='price']"],
-              type: "text"
-            },
-            image: {
-              selector: ["img", ".image", ".photo", ".picture", "[itemprop='image']"],
-              type: "attribute",
-              attribute: "src"
-            },
-            activities: {
-              selector: [".activities", ".features", ".amenities", ".tags", ".category", ".attractions"],
-              type: "list"
-            },
-            contactPhone: {
-              selector: [".phone", "[href^='tel:']", ".telephone", ".contact", "[itemprop='telephone']"],
-              type: "text"
-            },
-            contactEmail: {
-              selector: [".email", "[href^='mailto:']", "[itemprop='email']"],
-              type: "text"
-            },
-            contactWebsite: {
-              selector: ["a.website", "a.site", ".external-link", "a[href^='http']", "[itemprop='url']"],
-              type: "attribute",
-              attribute: "href"
-            }
-          }
+          ]
         };
         
         // Make the request to Zyte API with increased timeout
@@ -201,49 +219,71 @@ serve(async (req) => {
 function processZyteResponse(data: any): ExtractedProperty[] {
   const extractedProperties: ExtractedProperty[] = [];
   
-  // Process property listings if available
-  if (data && data.propertyListings && Array.isArray(data.propertyListings)) {
-    console.log(`Found ${data.propertyListings.length} property listings`);
+  // Check if we have property data in additionalSelectors
+  if (data && data.additionalSelectors && Array.isArray(data.additionalSelectors)) {
+    const propertyInfoItems = data.additionalSelectors.filter(item => item.name === "propertyInfo");
     
-    data.propertyListings.forEach((item: any) => {
-      const property: ExtractedProperty = {
-        name: normalizeText(item.name),
-        description: normalizeText(item.description),
-        location: normalizeText(item.location),
-        price: normalizeText(item.price),
-        activities: normalizeArray(item.activities),
-        image: normalizeUrl(item.image),
-        contact: {
-          phone: normalizeText(item.contactPhone),
-          email: normalizeText(item.contactEmail),
-          website: normalizeUrl(item.contactWebsite)
-        }
-      };
+    if (propertyInfoItems.length > 0 && Array.isArray(propertyInfoItems[0].results)) {
+      console.log(`Found ${propertyInfoItems[0].results.length} property listings in additionalSelectors`);
       
-      extractedProperties.push(property);
-    });
+      propertyInfoItems[0].results.forEach((item: any) => {
+        const property: ExtractedProperty = {
+          name: normalizeText(item.name),
+          description: normalizeText(item.description),
+          location: normalizeText(item.location),
+          price: normalizeText(item.price),
+          activities: normalizeArray(item.activities),
+          image: normalizeUrl(item.image),
+          contact: {
+            phone: normalizeText(item.contactPhone),
+            email: normalizeText(item.contactEmail),
+            website: normalizeUrl(item.contactWebsite)
+          }
+        };
+        
+        extractedProperties.push(property);
+      });
+    }
   }
   
-  // If no property listings were found, try to extract from the page directly
-  if (extractedProperties.length === 0) {
-    console.log("No property listings found, trying to extract from the page directly");
+  // If no properties found, try to get data from product info
+  if (extractedProperties.length === 0 && data && data.product) {
+    console.log("No property listings found in additionalSelectors, checking product data");
     
-    // Check if we have info directly at the root level
-    if (data && (data.name || data.description || data.price)) {
-      const property: ExtractedProperty = {
-        name: normalizeText(data.name) || 'Extracted Property',
-        description: normalizeText(data.description),
-        location: normalizeText(data.location),
-        price: normalizeText(data.price),
-        activities: normalizeArray(data.activities),
-        image: normalizeUrl(data.image),
-        contact: {
-          phone: normalizeText(data.contactPhone),
-          email: normalizeText(data.contactEmail),
-          website: normalizeUrl(data.contactWebsite)
-        }
-      };
-      
+    const property: ExtractedProperty = {
+      name: normalizeText(data.product.name),
+      description: normalizeText(data.product.description),
+      price: normalizeText(data.product.price),
+      image: data.product.images && data.product.images.length > 0 ? 
+        normalizeUrl(data.product.images[0]) : '',
+      contact: {
+        phone: '',
+        email: '',
+        website: ''
+      }
+    };
+    
+    if (Object.values(property).some(val => val && val !== '')) {
+      extractedProperties.push(property);
+    }
+  }
+  
+  // Try to extract from article if still no properties
+  if (extractedProperties.length === 0 && data && data.article) {
+    console.log("No property listings found in product data, checking article data");
+    
+    const property: ExtractedProperty = {
+      name: normalizeText(data.article.headline),
+      description: normalizeText(data.article.description || data.article.text),
+      image: normalizeUrl(data.article.image),
+      contact: {
+        phone: '',
+        email: '',
+        website: ''
+      }
+    };
+    
+    if (Object.values(property).some(val => val && val !== '')) {
       extractedProperties.push(property);
     }
   }
