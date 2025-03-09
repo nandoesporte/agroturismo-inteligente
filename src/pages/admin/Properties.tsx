@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { supabase } from '@/lib/supabase';
 import { useToast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
@@ -69,7 +69,8 @@ const AdminProperties = () => {
   const [importLoading, setImportLoading] = useState(false);
   const [isImportingCustomList, setIsImportingCustomList] = useState(false);
   const [imageUploadLoading, setImageUploadLoading] = useState(false);
-  const [imageFile, setImageFile] = useState<File | null>(null);
+  const [imageFiles, setImageFiles] = useState<File[]>([]);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     fetchProperties();
@@ -116,46 +117,56 @@ const AdminProperties = () => {
   };
 
   const handleImageFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files[0]) {
-      setImageFile(e.target.files[0]);
+    if (e.target.files) {
+      const filesArray = Array.from(e.target.files);
+      setImageFiles(prev => [...prev, ...filesArray]);
     }
   };
 
-  const uploadImage = async () => {
-    if (!imageFile) return;
+  const uploadImages = async () => {
+    if (imageFiles.length === 0) return;
     
     setImageUploadLoading(true);
     
     try {
-      const fileName = `${Date.now()}-${imageFile.name.replace(/\s+/g, '-').toLowerCase()}`;
+      const uploadPromises = imageFiles.map(async (file) => {
+        const fileName = `${Date.now()}-${file.name.replace(/\s+/g, '-').toLowerCase()}`;
+        
+        const { data, error } = await supabase.storage
+          .from('properties')
+          .upload(fileName, file);
+        
+        if (error) throw error;
+        
+        const { data: urlData } = supabase.storage
+          .from('properties')
+          .getPublicUrl(fileName);
+        
+        return urlData.publicUrl;
+      });
       
-      const { data, error } = await supabase.storage
-        .from('properties')
-        .upload(fileName, imageFile);
+      const uploadedUrls = await Promise.all(uploadPromises);
       
-      if (error) throw error;
-      
-      const { data: urlData } = supabase.storage
-        .from('properties')
-        .getPublicUrl(fileName);
-      
-      const newImages = [...formData.images, urlData.publicUrl];
+      const newImages = [...formData.images, ...uploadedUrls];
       setFormData(prev => ({ ...prev, images: newImages }));
       
-      if (!formData.image) {
-        setFormData(prev => ({ ...prev, image: urlData.publicUrl }));
+      if (!formData.image && uploadedUrls.length > 0) {
+        setFormData(prev => ({ ...prev, image: uploadedUrls[0] }));
       }
       
-      setImageFile(null);
+      setImageFiles([]);
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
       
       toast({
-        title: "Imagem carregada",
-        description: "A imagem foi carregada com sucesso.",
+        title: "Imagens carregadas",
+        description: `${uploadedUrls.length} ${uploadedUrls.length === 1 ? 'imagem foi carregada' : 'imagens foram carregadas'} com sucesso.`,
       });
     } catch (error: any) {
-      console.error('Erro ao carregar imagem:', error);
+      console.error('Erro ao carregar imagens:', error);
       toast({
-        title: "Erro ao carregar imagem",
+        title: "Erro ao carregar imagens",
         description: error.message,
         variant: "destructive",
       });
@@ -196,6 +207,10 @@ const AdminProperties = () => {
     } else if (formData.image === formData.images[index] && newImages.length === 0) {
       setFormData(prev => ({ ...prev, image: '' }));
     }
+  };
+
+  const removeImageFile = (index: number) => {
+    setImageFiles(prev => prev.filter((_, i) => i !== index));
   };
 
   const setAsMainImage = (imageUrl: string) => {
@@ -727,11 +742,13 @@ const AdminProperties = () => {
                             accept="image/*"
                             onChange={handleImageFileChange}
                             className="flex-grow"
+                            multiple
+                            ref={fileInputRef}
                           />
                           <Button 
                             type="button" 
-                            onClick={uploadImage} 
-                            disabled={!imageFile || imageUploadLoading}
+                            onClick={uploadImages} 
+                            disabled={imageFiles.length === 0 || imageUploadLoading}
                             className="flex-shrink-0"
                           >
                             {imageUploadLoading ? (
@@ -739,7 +756,7 @@ const AdminProperties = () => {
                             ) : (
                               <Upload className="h-4 w-4 mr-2" />
                             )}
-                            Enviar Imagem
+                            Enviar {imageFiles.length > 0 ? `(${imageFiles.length})` : ''} Imagens
                           </Button>
                         </div>
                         
@@ -753,6 +770,10 @@ const AdminProperties = () => {
                                     src={img} 
                                     alt={`Imagem ${index + 1}`} 
                                     className={`w-full h-28 object-cover ${formData.image === img ? 'ring-2 ring-nature-600' : ''}`}
+                                    onError={(e) => {
+                                      e.currentTarget.src = '/placeholder.svg';
+                                      e.currentTarget.className = e.currentTarget.className + ' opacity-50';
+                                    }}
                                   />
                                   <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
                                     {formData.image !== img && (
