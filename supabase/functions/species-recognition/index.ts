@@ -64,7 +64,7 @@ serve(async (req) => {
     console.log("Image data extracted successfully, length:", imageBase64.length);
     const dataUri = `data:image/jpeg;base64,${imageBase64}`;
 
-    // Use LLaVA or similar vision model to identify the species
+    // Step 1: Use LLaVA-like vision model to identify the species
     console.log("Sending image to vision model for species identification");
     const visionResponse = await fetch("https://api.groq.com/openai/v1/chat/completions", {
       method: "POST",
@@ -77,12 +77,12 @@ serve(async (req) => {
         messages: [
           {
             role: "system", 
-            content: "You are an expert biologist specializing in species identification. You will be shown an image of a plant or animal. Your task is to identify the species as accurately as possible. Provide ONLY the scientific name and common name in your response. Do not include any additional information or explanations."
+            content: "Você é um biólogo especialista em identificação de espécies. Você receberá uma imagem de uma planta ou animal. Sua tarefa é identificar a espécie com a maior precisão possível. Forneça APENAS o nome científico e o nome popular em sua resposta. Não inclua nenhuma informação ou explicação adicional."
           },
           {
             role: "user",
             content: [
-              { type: "text", text: "What species is shown in this image? Provide only the scientific name and common name." },
+              { type: "text", text: "Qual espécie é mostrada nesta imagem? Forneça apenas o nome científico e o nome popular." },
               { type: "image_url", image_url: { url: dataUri } }
             ]
           }
@@ -102,8 +102,8 @@ serve(async (req) => {
     const speciesIdentification = visionData.choices[0].message.content;
     console.log("Species identified:", speciesIdentification);
 
-    // Generate detailed description
-    console.log("Generating detailed description");
+    // Step 2: Generate detailed description using llama3-8b-8192
+    console.log("Generating detailed description using llama3-8b-8192");
     const descriptionResponse = await fetch("https://api.groq.com/openai/v1/chat/completions", {
       method: "POST",
       headers: {
@@ -119,7 +119,7 @@ serve(async (req) => {
           },
           {
             role: "user",
-            content: `Forneça uma descrição detalhada da seguinte espécie identificada: ${speciesIdentification}. Inclua informações sobre habitat, características físicas, comportamento (se for animal) ou ciclo de vida (se for planta), importância ecológica, relação com agroturismo e práticas sustentáveis, e curiosidades interessantes. Formate a resposta de forma organizada e educativa para visitantes de propriedades rurais.`
+            content: `Forneça uma descrição detalhada da seguinte espécie identificada: ${speciesIdentification}. Inclua informações sobre habitat, características físicas, comportamento (se for animal) ou ciclo de vida (se for planta), importância ecológica, relação com agroturismo e práticas sustentáveis, e curiosidades interessantes. Formate a resposta de forma organizada com títulos para cada seção.`
           }
         ],
         temperature: 0.7,
@@ -137,6 +137,7 @@ serve(async (req) => {
     const detailedDescription = descriptionData.choices[0].message.content;
     console.log("Description generated successfully");
 
+    // Step 3: Return the results to the web app
     return new Response(
       JSON.stringify({ 
         species: speciesIdentification,

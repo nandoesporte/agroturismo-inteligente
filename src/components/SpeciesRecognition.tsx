@@ -1,5 +1,6 @@
+
 import React, { useState, useRef } from 'react';
-import { Camera, Aperture, Upload, RefreshCw, Info } from 'lucide-react';
+import { Camera, Aperture, Upload, RefreshCw, Info, Leaf } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { cn } from '@/lib/utils';
@@ -79,7 +80,7 @@ const SpeciesRecognition = () => {
       if (ctx) {
         ctx.drawImage(videoRef.current, 0, 0);
         
-        const imageDataUrl = canvas.toDataURL('image/jpeg', 0.7);
+        const imageDataUrl = canvas.toDataURL('image/jpeg', 0.8);
         setCapturedImage(imageDataUrl);
         stopCapture();
       }
@@ -144,21 +145,23 @@ const SpeciesRecognition = () => {
         const ctx = canvas.getContext('2d');
         ctx?.drawImage(img, 0, 0, width, height);
         
-        let quality = 0.7;
+        // Start with a higher quality, then reduce if necessary
+        let quality = 0.8;
         let result = canvas.toDataURL('image/jpeg', quality);
         
         console.log(`Initial processed image size: ${Math.round(result.length / 1024)}KB`);
         
-        if (result.length > 500000) {
-          quality = 0.5;
+        // Reduce quality if file size is too large
+        if (result.length > 1000000) {
+          quality = 0.6;
           result = canvas.toDataURL('image/jpeg', quality);
-          console.log(`Reduced quality to 0.5, new size: ${Math.round(result.length / 1024)}KB`);
+          console.log(`Reduced quality to 0.6, new size: ${Math.round(result.length / 1024)}KB`);
         }
         
-        if (result.length > 200000) {
-          quality = 0.3;
+        if (result.length > 500000) {
+          quality = 0.4;
           result = canvas.toDataURL('image/jpeg', quality);
-          console.log(`Reduced quality to 0.3, new size: ${Math.round(result.length / 1024)}KB`);
+          console.log(`Reduced quality to 0.4, new size: ${Math.round(result.length / 1024)}KB`);
         }
         
         resolve(result);
@@ -183,23 +186,21 @@ const SpeciesRecognition = () => {
     
     try {
       const processedImage = await preprocessImage(capturedImage);
-      console.log("Image prepared for sending, size:", processedImage.length);
+      console.log("Image prepared for sending, size:", Math.round(processedImage.length / 1024), "KB");
       
       if (!processedImage || processedImage.length < 100) {
         throw new Error('Dados de imagem inválidos. Por favor, tente novamente com outra foto.');
       }
       
+      // Create payload with the processed image
       const payload = {
         image: processedImage
       };
       
-      console.log("Payload object created, sending to edge function");
+      console.log("Sending request to species-recognition edge function");
       
       const { data, error: functionError } = await supabase.functions.invoke('species-recognition', {
-        body: payload,
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        body: payload
       });
       
       if (functionError) {
@@ -216,6 +217,7 @@ const SpeciesRecognition = () => {
         throw new Error('Resposta inválida do serviço de reconhecimento');
       }
       
+      console.log("Species recognition successful:", data);
       setSpeciesInfo(data);
       setDialogOpen(true);
       toast({
@@ -265,6 +267,18 @@ const SpeciesRecognition = () => {
       stopCapture();
     };
   }, []);
+  
+  // Function to format the description text with better spacing and formatting
+  const formatDescription = (text: string) => {
+    // Replace Markdown-style headers with HTML
+    let formattedText = text
+      .replace(/^# (.*$)/gim, '<h2 class="text-xl font-semibold text-nature-700 dark:text-nature-400 mt-4 mb-2">$1</h2>')
+      .replace(/^## (.*$)/gim, '<h3 class="text-lg font-medium text-nature-600 dark:text-nature-500 mt-3 mb-1">$1</h3>')
+      .replace(/^### (.*$)/gim, '<h4 class="text-md font-medium text-nature-600 dark:text-nature-500 mt-2 mb-1">$1</h4>')
+      .replace(/\n/g, '<br />');
+    
+    return formattedText;
+  };
   
   return (
     <div className="w-full max-w-md mx-auto bg-white dark:bg-gray-800 rounded-xl shadow-md overflow-hidden p-5">
@@ -387,7 +401,7 @@ const SpeciesRecognition = () => {
                 </>
               ) : (
                 <>
-                  <Info className="mr-2 h-4 w-4" />
+                  <Leaf className="mr-2 h-4 w-4" />
                   Identificar espécie
                 </>
               )}
@@ -410,7 +424,9 @@ const SpeciesRecognition = () => {
           <div className="mt-2">
             {speciesInfo?.description ? (
               <div className="prose prose-sm dark:prose-invert max-w-none">
-                <div dangerouslySetInnerHTML={{ __html: speciesInfo.description.replace(/\n/g, '<br />') }} />
+                <div dangerouslySetInnerHTML={{ 
+                  __html: formatDescription(speciesInfo.description) 
+                }} />
               </div>
             ) : (
               <p className="text-gray-500 dark:text-gray-400">
