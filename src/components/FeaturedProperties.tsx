@@ -4,79 +4,12 @@ import { ArrowLeft, ArrowRight } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import PropertyCard, { Property } from './PropertyCard';
 import { Button } from '@/components/ui/button';
-
-// Sample data for properties
-const sampleProperties: Property[] = [
-  {
-    id: "1",
-    name: "Fazenda Vale Verde",
-    location: "Morretes, PR",
-    price: 150,
-    rating: 4.9,
-    reviewCount: 128,
-    image: "https://images.unsplash.com/photo-1566043641507-95a1226a03c1?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1470&q=80",
-    tags: ["Café Colonial", "Cavalos", "Pousada"],
-    isFeatured: true
-  },
-  {
-    id: "2",
-    name: "Recanto das Araucárias",
-    location: "Guarapuava, PR",
-    price: 120,
-    rating: 4.7,
-    reviewCount: 89,
-    image: "https://images.unsplash.com/photo-1568052232259-254c1dde2b95?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1470&q=80",
-    tags: ["Pesca", "Trilhas", "Refeições Caseiras"],
-    isFeatured: true
-  },
-  {
-    id: "3",
-    name: "Vinícola Santa Clara",
-    location: "Bituruna, PR",
-    price: 180,
-    rating: 4.8,
-    reviewCount: 102,
-    image: "https://images.unsplash.com/photo-1562601579-599dec564e06?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1470&q=80",
-    tags: ["Degustação de Vinhos", "Tour Guiado", "Restaurante"],
-    isFeatured: true
-  },
-  {
-    id: "4",
-    name: "Sítio Água Cristalina",
-    location: "Prudentópolis, PR",
-    price: 90,
-    rating: 4.6,
-    reviewCount: 74,
-    image: "https://images.unsplash.com/photo-1619546952812-520e98064a52?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1471&q=80",
-    tags: ["Cachoeiras", "Camping", "Café da Manhã"],
-    isFeatured: false
-  },
-  {
-    id: "5",
-    name: "Fazenda do Café",
-    location: "Londrina, PR",
-    price: 135,
-    rating: 4.7,
-    reviewCount: 95,
-    image: "https://images.unsplash.com/photo-1537182534312-f945134cce34?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1374&q=80",
-    tags: ["Plantação de Café", "Degustação", "Tour Educativo"],
-    isFeatured: false
-  },
-  {
-    id: "6",
-    name: "Paraíso dos Pássaros",
-    location: "Foz do Iguaçu, PR",
-    price: 200,
-    rating: 4.9,
-    reviewCount: 156,
-    image: "https://images.unsplash.com/photo-1523537444585-432d3eb564a7?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1470&q=80",
-    tags: ["Observação de Aves", "Chalés", "Piscina Natural"],
-    isFeatured: false
-  }
-];
+import { supabase } from '@/lib/supabase';
 
 const FeaturedProperties = () => {
   const [isVisible, setIsVisible] = useState(false);
+  const [properties, setProperties] = useState<Property[]>([]);
+  const [loading, setLoading] = useState(true);
   
   useEffect(() => {
     const timeout = setTimeout(() => {
@@ -86,8 +19,42 @@ const FeaturedProperties = () => {
     return () => clearTimeout(timeout);
   }, []);
   
-  // For a real app, you'd fetch this data from an API
-  const properties = sampleProperties;
+  useEffect(() => {
+    fetchFeaturedProperties();
+  }, []);
+  
+  const fetchFeaturedProperties = async () => {
+    setLoading(true);
+    try {
+      const { data, error } = await supabase
+        .from('properties')
+        .select('*')
+        .eq('is_featured', true)
+        .order('created_at', { ascending: false })
+        .limit(3);
+      
+      if (error) throw error;
+      
+      // Transform the data to match the Property interface
+      const transformedProperties = data.map(item => ({
+        id: item.id,
+        name: item.name,
+        location: item.location,
+        price: item.price,
+        rating: item.rating || 0,
+        reviewCount: item.review_count || 0,
+        image: item.image || 'https://images.unsplash.com/photo-1566043641507-95a1226a03c1?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1470&q=80',
+        tags: item.tags || [],
+        isFeatured: item.is_featured
+      }));
+      
+      setProperties(transformedProperties);
+    } catch (error) {
+      console.error('Error fetching featured properties:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
   
   return (
     <section className="section-spacing container-px">
@@ -122,22 +89,37 @@ const FeaturedProperties = () => {
           </div>
         </div>
         
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-          {properties.slice(0, 3).map((property, index) => (
-            <PropertyCard 
-              key={property.id} 
-              property={property} 
-              featured
-              className={cn(
-                "opacity-0",
-                isVisible && "animate-fade-up",
-                isVisible && index === 0 && "animation-delay-0",
-                isVisible && index === 1 && "animation-delay-100",
-                isVisible && index === 2 && "animation-delay-200"
-              )}
-            />
-          ))}
-        </div>
+        {loading ? (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+            {[1, 2, 3].map((index) => (
+              <div 
+                key={index} 
+                className="bg-gray-100 rounded-lg h-80 animate-pulse"
+              />
+            ))}
+          </div>
+        ) : properties.length === 0 ? (
+          <div className="text-center py-12">
+            <p className="text-muted-foreground">Nenhuma propriedade em destaque encontrada.</p>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+            {properties.map((property, index) => (
+              <PropertyCard 
+                key={property.id} 
+                property={property} 
+                featured
+                className={cn(
+                  "opacity-0",
+                  isVisible && "animate-fade-up",
+                  isVisible && index === 0 && "animation-delay-0",
+                  isVisible && index === 1 && "animation-delay-100",
+                  isVisible && index === 2 && "animation-delay-200"
+                )}
+              />
+            ))}
+          </div>
+        )}
         
         <div className="mt-8 text-center">
           <Button 
