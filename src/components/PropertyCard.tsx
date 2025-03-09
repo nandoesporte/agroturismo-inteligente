@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardFooter } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -14,18 +13,19 @@ export interface Property {
   rating: number;
   reviewCount: number;
   image: string;
-  images?: string[];
   tags: string[];
+  isFeatured?: boolean;
+  description?: string;
+  activities?: string[];
   amenities?: string[];
-  hours?: string;
+  hours?: string | Record<string, string>;
   contact?: {
     phone?: string;
     email?: string;
     website?: string;
+    address?: string;
   };
-  isFeatured?: boolean;
-  created_at?: string;
-  updated_at?: string;
+  images?: string[];
 }
 
 interface PropertyCardProps {
