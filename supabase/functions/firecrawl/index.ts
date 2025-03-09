@@ -67,17 +67,18 @@ serve(async (req) => {
       const mainContent = extractMainContent(htmlContent);
       
       // Truncate content to stay within token limits
-      const truncatedContent = mainContent.length > 10000 
-        ? mainContent.substring(0, 10000) + "..." 
+      const truncatedContent = mainContent.length > 15000 
+        ? mainContent.substring(0, 15000) + "..." 
         : mainContent;
       
       console.log(`Reduced content to ${truncatedContent.length} bytes`);
       
       // Create a specialized prompt for the AI to extract property data
+      // Aumentado o número máximo de propriedades que o modelo deve extrair
       const prompt = `
         Você é um especialista em extração de dados especializado em propriedades de hospedagem e turismo. Sua tarefa é extrair informações de propriedades a partir do conteúdo HTML fornecido.
         
-        Extraia todas as propriedades/hospedagens que você encontrar. Para cada uma, forneça APENAS os seguintes campos:
+        Extraia TODAS as propriedades/hospedagens que você encontrar, sem limitação de quantidade (extraia no mínimo 10 propriedades se existirem). Para cada uma, forneça APENAS os seguintes campos:
         1. Nome (string): Nome da propriedade/pousada/hotel
         2. Localização (string): Localização da propriedade
         3. Preço (string): Informação de preço exatamente como aparece (com símbolo de moeda)
@@ -90,7 +91,9 @@ serve(async (req) => {
            - Email (string): Endereço de e-mail
            - Website (string): URL do site
 
-        Formate sua resposta como um JSON válido com exatamente esses nomes de campos:
+        Formate sua resposta como um JSON válido com exatamente esses nomes de campos.
+        É extremamente importante que você extraia o máximo de propriedades possível, não se limite a apenas algumas.
+        
         [
           {
             "name": "Nome da Propriedade",
@@ -106,6 +109,10 @@ serve(async (req) => {
               "email": "endereço de email",
               "website": "url do website"
             }
+          },
+          {
+            "name": "Nome da Segunda Propriedade",
+            // ... e assim por diante para cada propriedade
           }
         ]
         
@@ -115,6 +122,7 @@ serve(async (req) => {
       console.log("Sending request to GROQ API for extraction");
       
       // Make the request to the Groq API with Llama model
+      // Aumentando max_tokens para permitir respostas maiores
       const groqResponse = await fetch("https://api.groq.com/openai/v1/chat/completions", {
         method: "POST",
         headers: {
@@ -127,7 +135,7 @@ serve(async (req) => {
             { role: "user", content: prompt + "\n\nHere is the content to extract from:\n\n" + truncatedContent }
           ],
           temperature: 0.2, // Lower temperature for more consistent structured output
-          max_tokens: 3000
+          max_tokens: 6000  // Aumentado para permitir mais propriedades na resposta
         })
       });
 
@@ -212,6 +220,11 @@ function extractMainContent(html: string): string {
     /<div[^>]*class="[^"]*property-list[^"]*"[^>]*>([\s\S]*?)<\/div>/i,
     /<div[^>]*class="[^"]*search-results[^"]*"[^>]*>([\s\S]*?)<\/div>/i,
     /<main[^>]*>([\s\S]*?)<\/main>/i,
+    /<div[^>]*class="[^"]*listing[^"]*"[^>]*>([\s\S]*?)<\/div>/i,
+    /<div[^>]*class="[^"]*results[^"]*"[^>]*>([\s\S]*?)<\/div>/i,
+    /<div[^>]*class="[^"]*products[^"]*"[^>]*>([\s\S]*?)<\/div>/i,
+    /<div[^>]*id="[^"]*listing[^"]*"[^>]*>([\s\S]*?)<\/div>/i,
+    /<div[^>]*id="[^"]*search-results[^"]*"[^>]*>([\s\S]*?)<\/div>/i,
   ];
   
   // Try each regex pattern to find the main content
@@ -237,7 +250,7 @@ function extractMainContent(html: string): string {
   }
   
   // Return a shortened version of the cleaned HTML
-  return cleanedHtml.length > 20000 ? cleanedHtml.substring(0, 20000) : cleanedHtml;
+  return cleanedHtml.length > 30000 ? cleanedHtml.substring(0, 30000) : cleanedHtml;
 }
 
 // Helper function to normalize the extracted properties
