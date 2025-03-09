@@ -59,6 +59,7 @@ export type Database = {
           hours: string | null
           id: string
           image: string | null
+          images: string[] | null
           is_featured: boolean | null
           location: string
           name: string
@@ -75,6 +76,7 @@ export type Database = {
           hours?: string | null
           id?: string
           image?: string | null
+          images?: string[] | null
           is_featured?: boolean | null
           location: string
           name: string
@@ -91,6 +93,7 @@ export type Database = {
           hours?: string | null
           id?: string
           image?: string | null
+          images?: string[] | null
           is_featured?: boolean | null
           location?: string
           name?: string

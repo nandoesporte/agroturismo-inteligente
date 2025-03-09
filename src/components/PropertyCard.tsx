@@ -1,10 +1,9 @@
-
-import React from 'react';
-import { Link } from 'react-router-dom';
-import { Star, MapPin, Bookmark, ChevronLeft, ChevronRight } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Card, CardContent, CardFooter } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Star, MapPin } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { motion } from 'framer-motion';
-import { useState } from 'react';
+import { Link } from 'react-router-dom';
 
 export interface Property {
   id: string;
@@ -26,153 +25,70 @@ interface PropertyCardProps {
   index?: number;
 }
 
-const PropertyCard: React.FC<PropertyCardProps> = ({ 
+const PropertyCard = ({ 
   property, 
   className,
   featured = false,
   index = 0
-}) => {
-  const [currentImageIndex, setCurrentImageIndex] = useState(0);
+}: PropertyCardProps) => {
+  const [isVisible, setIsVisible] = useState(false);
   
-  // Get the displayed image (either from images array or fallback to the main image)
-  const displayImages = property.images && property.images.length > 0 
-    ? property.images 
-    : [property.image];
+  useEffect(() => {
+    const delay = 200 * index;
+    const timeout = setTimeout(() => {
+      setIsVisible(true);
+    }, delay);
+    
+    return () => clearTimeout(timeout);
+  }, [index]);
   
-  const handlePrevImage = (e: React.MouseEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    setCurrentImageIndex(prev => 
-      prev === 0 ? displayImages.length - 1 : prev - 1
-    );
-  };
-  
-  const handleNextImage = (e: React.MouseEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    setCurrentImageIndex(prev => 
-      prev === displayImages.length - 1 ? 0 : prev + 1
-    );
-  };
-
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.4, delay: index * 0.1 }}
+    <Card
+      className={cn(
+        "bg-white shadow-md overflow-hidden transition-all duration-300",
+        isVisible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-8",
+        className
+      )}
     >
-      <Link 
-        to={`/properties/${property.id}`}
-        className={cn(
-          "group block rounded-xl overflow-hidden hover-scale trans bg-card",
-          featured ? "shadow-lg" : "shadow-sm hover:shadow-md",
-          className
-        )}
-      >
-        <div className="relative aspect-[4/3] overflow-hidden rounded-t-xl">
-          <img 
-            src={displayImages[currentImageIndex]} 
+      <Link to={`/property/${property.id}`}>
+        <div className="relative">
+          <img
+            src={property.image}
             alt={property.name}
-            className="w-full h-full object-cover trans group-hover:scale-105"
+            className="w-full h-52 object-cover rounded-t-md"
           />
-          
-          {displayImages.length > 1 && (
-            <>
-              <button 
-                onClick={handlePrevImage}
-                className="absolute left-2 top-1/2 -translate-y-1/2 p-1 rounded-full bg-black/30 hover:bg-black/50 text-white transition-all"
-                aria-label="Imagem anterior"
-              >
-                <ChevronLeft className="h-5 w-5" />
-              </button>
-              <button 
-                onClick={handleNextImage}
-                className="absolute right-2 top-1/2 -translate-y-1/2 p-1 rounded-full bg-black/30 hover:bg-black/50 text-white transition-all"
-                aria-label="Próxima imagem"
-              >
-                <ChevronRight className="h-5 w-5" />
-              </button>
-              
-              {/* Image indicators */}
-              <div className="absolute bottom-2 left-1/2 -translate-x-1/2 flex gap-1">
-                {displayImages.map((_, idx) => (
-                  <div 
-                    key={idx} 
-                    className={cn(
-                      "w-1.5 h-1.5 rounded-full bg-white/70",
-                      idx === currentImageIndex && "w-2.5 bg-white"
-                    )}
-                  />
-                ))}
-              </div>
-            </>
-          )}
-          
-          {property.isFeatured && (
-            <span className="absolute top-3 left-3 bg-nature-600 text-white text-xs font-medium px-3 py-1 rounded-full shadow-sm">
+          {featured && (
+            <Badge className="absolute top-2 left-2 bg-emerald-500 text-white shadow-md">
               Destaque
-            </span>
+            </Badge>
           )}
-          
-          <button 
-            className="absolute top-3 right-3 p-2 rounded-full bg-white/80 backdrop-blur-sm hover:bg-white text-muted-foreground hover:text-rose-500 transition-all"
-            aria-label="Favoritar"
-            onClick={(e) => e.preventDefault()}
-          >
-            <Bookmark className="h-4 w-4" />
-          </button>
-          
-          <div className="absolute inset-x-0 bottom-0 h-12 bg-gradient-to-t from-black/50 to-transparent" />
         </div>
-        
-        <div className="p-4">
-          <div className="flex justify-between items-start">
-            <h3 className="font-semibold text-lg line-clamp-1 group-hover:text-nature-700 trans">
-              {property.name}
-            </h3>
-            <div className="flex items-center space-x-1 text-sm bg-accent/50 px-2 py-0.5 rounded-full">
-              <Star className="w-3.5 h-3.5 fill-yellow-400 text-yellow-400" />
-              <span className="font-medium">{property.rating.toFixed(1)}</span>
-              <span className="text-xs text-muted-foreground">({property.reviewCount})</span>
+        <CardContent className="p-4">
+          <h3 className="text-lg font-semibold text-gray-800 line-clamp-1">{property.name}</h3>
+          <div className="flex items-center text-gray-600 mt-1">
+            <MapPin className="h-4 w-4 mr-1" />
+            <p className="text-sm line-clamp-1">{property.location}</p>
+          </div>
+          <div className="flex items-center mt-2">
+            <Star className="h-4 w-4 text-yellow-500 mr-1" />
+            <span className="text-sm font-medium text-gray-700">{property.rating.toFixed(1)}</span>
+            <span className="text-gray-500 text-xs ml-1">({property.reviewCount} avaliações)</span>
+          </div>
+        </CardContent>
+        <CardFooter className="px-4 pb-4 pt-2">
+          <div className="flex justify-between items-center">
+            <span className="text-nature-700 font-semibold text-lg">R$ {property.price.toFixed(2)}</span>
+            <div className="flex space-x-2">
+              {property.tags.slice(0, 2).map((tag) => (
+                <Badge key={tag} variant="secondary">
+                  {tag}
+                </Badge>
+              ))}
             </div>
           </div>
-          
-          <div className="mt-1 flex items-center text-sm text-muted-foreground">
-            <MapPin className="w-3.5 h-3.5 mr-1" />
-            <span>{property.location}</span>
-          </div>
-          
-          <div className="mt-3 flex flex-wrap gap-1.5">
-            {property.tags.slice(0, 3).map((tag, index) => (
-              <span 
-                key={index}
-                className="text-xs bg-accent/80 text-accent-foreground px-2 py-0.5 rounded-full"
-              >
-                {tag}
-              </span>
-            ))}
-            {property.tags.length > 3 && (
-              <span className="text-xs bg-muted text-muted-foreground px-2 py-0.5 rounded-full">
-                +{property.tags.length - 3}
-              </span>
-            )}
-          </div>
-          
-          <div className="mt-4 border-t border-border pt-3">
-            <div className="flex items-baseline">
-              {property.price > 0 ? (
-                <>
-                  <span className="font-medium text-lg">R$ {property.price.toFixed(2)}</span>
-                  <span className="text-sm text-muted-foreground ml-1">/ por pessoa</span>
-                </>
-              ) : (
-                <span className="text-sm text-muted-foreground">Preço sob consulta</span>
-              )}
-            </div>
-          </div>
-        </div>
+        </CardFooter>
       </Link>
-    </motion.div>
+    </Card>
   );
 };
 
