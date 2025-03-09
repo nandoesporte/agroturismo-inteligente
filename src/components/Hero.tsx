@@ -178,7 +178,8 @@ const Hero = () => {
           </motion.div>
         </motion.div>
 
-        <div className="absolute bottom-20 sm:bottom-16 left-0 right-0 flex justify-center space-x-1.5">
+        {/* Repositioned slide indicators - moved up above the buttons */}
+        <div className="absolute bottom-32 sm:bottom-28 left-0 right-0 flex justify-center space-x-1.5">
           {slides.map((_, index) => (
             <button
               key={index}
