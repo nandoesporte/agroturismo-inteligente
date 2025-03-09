@@ -27,11 +27,11 @@ serve(async (req) => {
   }
 
   try {
-    // Use the API key provided by the user
-    const FIRECRAWL_API_KEY = "fc-a0d24fd2d0074dcd8ed94a7082bf19c2";
+    // Use the Zyte API key instead of Firecrawl
+    const ZYTE_API_KEY = Deno.env.get("ZYTE_API_KEY");
     
-    if (!FIRECRAWL_API_KEY) {
-      throw new Error("Missing Firecrawl API key");
+    if (!ZYTE_API_KEY) {
+      throw new Error("Missing Zyte API key");
     }
 
     const { url } = await req.json();
@@ -48,112 +48,87 @@ serve(async (req) => {
 
     console.log(`Scraping data from URL: ${url}`);
 
-    // Official API endpoint from docs: https://docs.firecrawl.dev/introduction
-    const firecrawlUrl = "https://api.firecrawl.dev/extract";
-    console.log(`Making request to Firecrawl API endpoint: ${firecrawlUrl}`);
+    // Zyte API endpoint
+    const zyteUrl = "https://extraction.zyte.com/v1/extract";
+    console.log(`Making request to Zyte API endpoint: ${zyteUrl}`);
     
-    const selector = {
-      properties: {
-        selector: "div.property-card, div.listing-item, article.property, .property-listing, .destination-item, .product-card, .tour-item, .accommodation-item, .card, .item, .product",
-        type: "list",
-        properties: {
-          name: "h1, h2, h3, h4, .title, .name, .heading",
-          description: "p, .description, .excerpt, .summary, .text",
-          location: ".location, .address, .place, .region",
-          price: ".price, .cost, .value",
-          image: {
-            selector: "img",
-            type: "attribute",
-            attribute: "src"
-          },
-          contact: {
-            properties: {
-              phone: ".phone, [href^='tel:'], .telephone, .contact",
-              email: ".email, [href^='mailto:']",
-              website: {
-                selector: "a.website, a.site, .external-link, a[href^='http']",
-                type: "attribute",
-                attribute: "href"
-              }
-            }
-          }
+    // Prepare the request for Zyte API
+    const zytePayload = {
+      url: url,
+      extractFrom: {
+        propertyItems: {
+          // Multiple selectors to try and capture different property structures
+          selector: "div.property-card, div.listing-item, article.property, .property-listing, .destination-item, .product-card, .tour-item, .accommodation-item, .card, .item, .product",
+        }
+      },
+      extract: {
+        name: {
+          selector: "h1, h2, h3, h4, .title, .name, .heading",
+          type: "text"
+        },
+        description: {
+          selector: "p, .description, .excerpt, .summary, .text",
+          type: "text"
+        },
+        location: {
+          selector: ".location, .address, .place, .region",
+          type: "text"
+        },
+        price: {
+          selector: ".price, .cost, .value",
+          type: "text"
+        },
+        image: {
+          selector: "img",
+          type: "attribute",
+          attribute: "src"
+        },
+        contactPhone: {
+          selector: ".phone, [href^='tel:'], .telephone, .contact",
+          type: "text"
+        },
+        contactEmail: {
+          selector: ".email, [href^='mailto:']",
+          type: "text"
+        },
+        contactWebsite: {
+          selector: "a.website, a.site, .external-link, a[href^='http']",
+          type: "attribute",
+          attribute: "href"
         }
       }
     };
     
-    const firecrawlResponse = await fetch(firecrawlUrl, {
+    // Make the request to Zyte API
+    const zyteResponse = await fetch(zyteUrl, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        "Authorization": `Bearer ${FIRECRAWL_API_KEY}`
+        "Authorization": `Basic ${btoa(ZYTE_API_KEY + ":")}`
       },
-      body: JSON.stringify({
-        url: url,
-        selectors: selector
-      })
+      body: JSON.stringify(zytePayload)
     });
 
-    if (!firecrawlResponse.ok) {
-      const errorText = await firecrawlResponse.text();
-      console.error("Firecrawl API error:", errorText);
-      console.error("Status code:", firecrawlResponse.status);
+    if (!zyteResponse.ok) {
+      const errorText = await zyteResponse.text();
+      console.error("Zyte API error:", errorText);
+      console.error("Status code:", zyteResponse.status);
       
-      // Fallback to the v2 endpoint
-      console.log("Attempting v2 API endpoint...");
-      
-      const v2Url = "https://api.firecrawl.dev/api/v2/extract";
-      console.log(`Making v2 request to: ${v2Url}`);
-      
-      const v2Response = await fetch(v2Url, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "Authorization": `Bearer ${FIRECRAWL_API_KEY}`
-        },
-        body: JSON.stringify({
-          url: url,
-          selectors: selector
-        })
-      });
-      
-      if (!v2Response.ok) {
-        const v2Error = await v2Response.text();
-        console.error("V2 API error:", v2Error);
-        
-        throw new Error(`Firecrawl API error: Could not connect to any endpoint. Last error: ${v2Error}`);
-      }
-      
-      const v2Data = await v2Response.json();
-      console.log("Received v2 response:", JSON.stringify(v2Data, null, 2));
-      
-      // Process the extracted data
-      const extractedProperties: ExtractedProperty[] = processResponseData(v2Data);
-      
-      return new Response(
-        JSON.stringify({ 
-          success: true, 
-          properties: extractedProperties,
-          rawData: v2Data,
-          endpoint: "v2"
-        }),
-        { 
-          headers: { ...corsHeaders, "Content-Type": "application/json" } 
-        }
-      );
+      throw new Error(`Zyte API error: ${errorText}`);
     }
 
-    const data = await firecrawlResponse.json();
-    console.log("Received response from Firecrawl API:", JSON.stringify(data, null, 2));
+    const zyteData = await zyteResponse.json();
+    console.log("Received response from Zyte API:", JSON.stringify(zyteData, null, 2));
 
     // Process and clean the extracted data
-    const extractedProperties: ExtractedProperty[] = processResponseData(data);
+    const extractedProperties = processZyteResponse(zyteData);
 
     return new Response(
       JSON.stringify({ 
         success: true, 
         properties: extractedProperties,
-        rawData: data,
-        endpoint: "primary"
+        rawData: zyteData,
+        endpoint: "zyte"
       }),
       { 
         headers: { ...corsHeaders, "Content-Type": "application/json" } 
@@ -171,115 +146,62 @@ serve(async (req) => {
   }
 });
 
-// Helper function to process different response structures
-function processResponseData(data: any): ExtractedProperty[] {
+// Helper function to process Zyte API response
+function processZyteResponse(data: any): ExtractedProperty[] {
   const extractedProperties: ExtractedProperty[] = [];
   
-  // Handle different response formats
-  if (data && data.data && Array.isArray(data.data.properties)) {
-    // Handle v2 format
-    data.data.properties.forEach((prop: any) => {
+  // Handle the specific Zyte API response format
+  if (data && data.propertyItems) {
+    // If Zyte found property items
+    data.propertyItems.forEach((item: any) => {
       const property: ExtractedProperty = {
-        name: prop.name || '',
-        description: prop.description || '',
-        location: prop.location || '',
-        price: prop.price || '',
-        image: prop.image || '',
+        name: item.name || '',
+        description: item.description || '',
+        location: item.location || '',
+        price: item.price || '',
+        image: item.image || '',
         contact: {
-          phone: prop.contact?.phone || '',
-          email: prop.contact?.email || '',
-          website: prop.contact?.website || ''
+          phone: item.contactPhone || '',
+          email: item.contactEmail || '',
+          website: item.contactWebsite || ''
         }
       };
       
       extractedProperties.push(property);
     });
-  } else if (data && Array.isArray(data.properties)) {
-    // Handle direct properties array format
-    data.properties.forEach((prop: any) => {
-      const property: ExtractedProperty = {
-        name: prop.name || '',
-        description: prop.description || '',
-        location: prop.location || '',
-        price: prop.price || '',
-        image: prop.image || '',
-        contact: {
-          phone: prop.contact?.phone || '',
-          email: prop.contact?.email || '',
-          website: prop.contact?.website || ''
-        }
-      };
-      
-      extractedProperties.push(property);
-    });
-  } else if (data && data.results && Array.isArray(data.results)) {
-    // Handle primary endpoint format with results array
-    data.results.forEach((item: any) => {
-      if (item.properties && Array.isArray(item.properties)) {
-        item.properties.forEach((prop: any) => {
-          const property: ExtractedProperty = {
-            name: prop.name || '',
-            description: prop.description || '',
-            location: prop.location || '',
-            price: prop.price || '',
-            image: prop.image || '',
-            contact: {
-              phone: prop.contact?.phone || '',
-              email: prop.contact?.email || '',
-              website: prop.contact?.website || ''
-            }
-          };
-          
-          extractedProperties.push(property);
-        });
+  } else if (data && data.name) {
+    // If Zyte found a single property
+    const property: ExtractedProperty = {
+      name: data.name || '',
+      description: data.description || '',
+      location: data.location || '',
+      price: data.price || '',
+      image: data.image || '',
+      contact: {
+        phone: data.contactPhone || '',
+        email: data.contactEmail || '',
+        website: data.contactWebsite || ''
       }
-    });
-  } else if (data && data.content) {
-    // Handle simple content format
-    try {
-      // Try to parse any JSON content that might be embedded
-      const parsedContent = typeof data.content === 'string' 
-        ? JSON.parse(data.content) 
-        : data.content;
-      
-      if (Array.isArray(parsedContent)) {
-        parsedContent.forEach((item: any) => {
-          const property: ExtractedProperty = {
-            name: item.name || item.title || '',
-            description: item.description || item.content || '',
-            location: item.location || item.address || '',
-            price: item.price || '',
-            image: item.image || item.thumbnail || '',
-            contact: {
-              phone: item.contact?.phone || item.phone || '',
-              email: item.contact?.email || item.email || '',
-              website: item.contact?.website || item.website || ''
-            }
-          };
-          
-          extractedProperties.push(property);
-        });
-      }
-    } catch (e) {
-      console.error("Error parsing content:", e);
-    }
+    };
+    
+    extractedProperties.push(property);
   }
   
-  // If no properties were found, try a more general approach
-  if (extractedProperties.length === 0) {
+  // If no properties were found but we have some general data
+  if (extractedProperties.length === 0 && data) {
     console.log("No properties found in structured format, attempting general extraction");
     
     // Create at least one generic property with whatever data we have
     const property: ExtractedProperty = {
-      name: data.title || 'Extracted Property',
+      name: data.title || data.name || 'Extracted Property',
       description: data.content || data.description || '',
       location: data.location || '',
-      price: '',
+      price: data.price || '',
       image: data.image || '',
       contact: {
-        phone: '',
-        email: '',
-        website: ''
+        phone: data.contactPhone || data.phone || '',
+        email: data.contactEmail || data.email || '',
+        website: data.contactWebsite || data.website || ''
       }
     };
     

@@ -1,4 +1,3 @@
-
 import { supabase } from '@/lib/supabase';
 
 export type ExtractedProperty = {
@@ -24,7 +23,7 @@ export class FirecrawlService {
     endpoint?: string;
   }> {
     try {
-      console.log('Making scrape request to Firecrawl Edge Function');
+      console.log('Making scrape request to Zyte Edge Function');
       
       const { data, error } = await supabase.functions.invoke('firecrawl', {
         body: { url }
@@ -41,7 +40,6 @@ export class FirecrawlService {
       console.log('Scrape successful using endpoint:', data.endpoint);
       console.log('Properties found:', data.properties?.length || 0);
       
-      // Normalize empty arrays to prevent UI issues
       const properties = data.properties && data.properties.length > 0
         ? data.properties.map((property: ExtractedProperty) => ({
             ...property,
