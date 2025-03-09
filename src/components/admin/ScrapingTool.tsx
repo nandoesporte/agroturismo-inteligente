@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
@@ -9,7 +8,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
-import { Plus, Undo2, Check, X, ExternalLink, Phone, Mail, Info, Sparkles, Clock, Home, Tag } from 'lucide-react';
+import { Plus, Undo2, Check, X, ExternalLink, Phone, Mail, Info, Sparkles, Clock, Home, Tag, AlertCircle } from 'lucide-react';
 import {
   Tooltip,
   TooltipContent,
@@ -23,15 +22,20 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  Alert,
+  AlertDescription,
+  AlertTitle,
+} from "@/components/ui/alert";
 
-// Predefined URLs focused on Paraná rural tourism
+// Predefined URLs focused on Paraná rural tourism - updated to include more scrapable sites
 const predefinedUrls = [
-  { name: "Trivago Agroturismo Paraná", url: "https://www.trivago.com.br/pt-BR/srl/hotels-paraná-brasil/agriturismo-pousada-rural?search=paraná%20agroturismo" },
-  { name: "Trivago Pousadas Rurais Paraná", url: "https://www.trivago.com.br/pt-BR/srl/hotels-paraná-brasil/pousada-rural?search=paraná%20pousada%20rural" },
-  { name: "Trivago Fazendas Paraná", url: "https://www.trivago.com.br/pt-BR/srl/hotels-paraná-brasil/fazenda-hotel?search=paraná%20fazenda%20hotel" },
-  { name: "Trivago Hotéis Rurais Paraná", url: "https://www.trivago.com.br/pt-BR/srl/hotels-paraná-brasil/hotel%20rural?search=paraná%20hotel%20rural" },
-  { name: "Trivago Ecoturismo Paraná", url: "https://www.trivago.com.br/pt-BR/srl/hotels-paraná-brasil/eco%20resort?search=paraná%20ecoturismo" },
-  { name: "Chalés no Paraná", url: "https://www.trivago.com.br/pt-BR/srl/hotels-paraná-brasil/chales?search=paraná%20chalés" },
+  { name: "Sites do Governo do Paraná", url: "https://www.viajeparana.com/Estrada-do-Cafe" },
+  { name: "Viaje Paraná - Rotas Turísticas", url: "https://www.viajeparana.com/Rota-dos-Tropeiros" },
+  { name: "Guia Turismo Brasil - Paraná", url: "https://www.guiadoturismobrasil.com/cidade/PR/475/curitiba" },
+  { name: "Gralha Azul Eco Turismo", url: "https://www.gralhaazul.eco.br/turismo-rural" },
+  { name: "Prefeitura de Castro - Turismo", url: "https://castro.atende.net/cidadao/pagina/turismo" },
+  { name: "Prefeitura de Prudentópolis", url: "https://www.prudentopolis.pr.gov.br/turismo/" },
   { name: "Cafés Coloniais Paraná", url: "https://www.google.com/search?q=cafés+coloniais+paraná" }
 ];
 
@@ -98,7 +102,7 @@ export const ScrapingTool: React.FC<ScrapingToolProps> = ({ onImportProperty }) 
         });
       } else {
         toast({
-          title: "Nenhuma propriedade encontrada",
+          title: "Erro na extração",
           description: result.error || "A IA não conseguiu extrair dados deste site",
           variant: "destructive",
         });
@@ -182,9 +186,18 @@ export const ScrapingTool: React.FC<ScrapingToolProps> = ({ onImportProperty }) 
         </CardDescription>
       </CardHeader>
       <CardContent>
+        <Alert className="mb-4 bg-amber-50 text-amber-800 border-amber-200">
+          <AlertCircle className="h-4 w-4" />
+          <AlertTitle>Limitações de Raspagem</AlertTitle>
+          <AlertDescription>
+            Muitos sites como TripAdvisor, Booking e Trivago bloqueiam solicitações automatizadas (erro 403). 
+            Para melhores resultados, use sites de prefeituras, blogs ou portais de turismo do governo.
+          </AlertDescription>
+        </Alert>
+        
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
           <TabsList className="grid w-full grid-cols-2">
-            <TabsTrigger value="predefined">Buscas Predefinidas (Paraná)</TabsTrigger>
+            <TabsTrigger value="predefined">Sites Recomendados (Paraná)</TabsTrigger>
             <TabsTrigger value="custom">URL Personalizada</TabsTrigger>
           </TabsList>
           
@@ -213,7 +226,7 @@ export const ScrapingTool: React.FC<ScrapingToolProps> = ({ onImportProperty }) 
                 "Analisando com IA..."
               ) : (
                 <>
-                  <Sparkles className="h-4 w-4 mr-2" /> Extrair Até 20 Propriedades com IA
+                  <Sparkles className="h-4 w-4 mr-2" /> Extrair Propriedades com IA
                 </>
               )}
             </Button>
@@ -231,8 +244,8 @@ export const ScrapingTool: React.FC<ScrapingToolProps> = ({ onImportProperty }) 
                 className="w-full"
               />
               <p className="text-xs text-muted-foreground">
-                Insira qualquer URL de site que contenha dados de propriedades de turismo ou hospedagem.
-                Os resultados serão adaptados para o contexto do turismo rural no Paraná.
+                Insira a URL de um site que contenha informações sobre propriedades de turismo rural. 
+                Sites de prefeituras, portais governamentais e blogs funcionam melhor pois não bloqueiam acessos.
               </p>
             </div>
             
@@ -245,7 +258,7 @@ export const ScrapingTool: React.FC<ScrapingToolProps> = ({ onImportProperty }) 
                 "Analisando com IA..."
               ) : (
                 <>
-                  <Sparkles className="h-4 w-4 mr-2" /> Extrair Até 20 Propriedades com IA
+                  <Sparkles className="h-4 w-4 mr-2" /> Extrair Propriedades com IA
                 </>
               )}
             </Button>

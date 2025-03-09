@@ -48,10 +48,64 @@ const categorizeProperty = (property: ExtractedProperty): string => {
   return 'Turismo Rural';
 };
 
+// List of blocked domains that commonly return 403 errors
+const KNOWN_BLOCKED_DOMAINS = [
+  'tripadvisor.com',
+  'tripadvisor.com.br',
+  'booking.com',
+  'airbnb.com',
+  'hotels.com',
+  'expedia.com',
+  'agoda.com',
+  'kayak.com',
+  'trivago.com',
+  'trivago.com.br'
+];
+
 export class FirecrawlService {
   static async scrapeWebsite(url: string): Promise<{ success: boolean; properties?: ExtractedProperty[]; error?: string }> {
     try {
       console.log(`Starting Firecrawl scraping for URL: ${url}`);
+      
+      // Check if the URL contains any of the known blocked domains
+      if (KNOWN_BLOCKED_DOMAINS.some(domain => url.includes(domain))) {
+        console.warn(`The URL contains a domain (${KNOWN_BLOCKED_DOMAINS.find(domain => url.includes(domain))}) that typically blocks scraping requests`);
+        
+        // For Trivago URLs specifically, we can try to extract some context from the URL itself
+        if (url.includes('trivago')) {
+          // Create some fallback properties based on the URL
+          const urlParts = url.split('/');
+          const searchParams = url.split('search=')[1];
+          const locationHint = searchParams ? decodeURIComponent(searchParams.split('&')[0]) : '';
+          
+          // Return fallback properties for Trivago
+          return {
+            success: true,
+            properties: [
+              {
+                name: "Este site não permite acesso direto",
+                description: "Não foi possível acessar este site pois ele bloqueia solicitações automáticas (erro 403 Forbidden).",
+                location: locationHint || "Paraná",
+                contact: {
+                  website: url
+                },
+                type: url.includes('agroturismo') ? 'Agroturismo' : 
+                      url.includes('pousada-rural') ? 'Pousada Rural' : 
+                      url.includes('fazenda') ? 'Fazenda' : 
+                      url.includes('chales') ? 'Chalé' : 'Turismo Rural',
+                activities: [],
+                amenities: []
+              }
+            ]
+          };
+        }
+        
+        // Return a useful error message for other blocked sites
+        return {
+          success: false,
+          error: `Este site (${new URL(url).hostname}) bloqueia acesso automático. Por favor, tente um site diferente ou use a opção de formulário manual.`
+        };
+      }
       
       // Add improved retry mechanism with exponential backoff
       let attempt = 0;
@@ -76,6 +130,15 @@ export class FirecrawlService {
           
           if (error) {
             console.error(`Error calling Firecrawl edge function (attempt ${attempt}/${maxAttempts}):`, error);
+            
+            // Special handling for 403 errors
+            if (error.message && (error.message.includes('403') || error.message.includes('Forbidden'))) {
+              return {
+                success: false,
+                error: `O site ${new URL(url).hostname} está bloqueando acesso (403 Forbidden). Por favor, tente um site diferente ou use a função de adicionar manualmente.`
+              };
+            }
+            
             lastError = new Error(`Failed to scrape website: ${error.message}`);
             // Wait with exponential backoff before retry
             if (attempt < maxAttempts) {
@@ -87,6 +150,15 @@ export class FirecrawlService {
           
           if (!data || !data.success) {
             console.error(`Firecrawl returned an error (attempt ${attempt}/${maxAttempts}):`, data?.error || 'Unknown error');
+            
+            // If it's a 403 error, return a user-friendly message
+            if (data?.error && (data.error.includes('403') || data.error.includes('Forbidden'))) {
+              return {
+                success: false,
+                error: `O site ${new URL(url).hostname} está bloqueando acesso (403 Forbidden). Por favor, tente um site diferente ou use a função de adicionar manualmente.`
+              };
+            }
+            
             lastError = new Error(data?.error || 'Failed to extract data from the website');
             // Wait with exponential backoff before retry
             if (attempt < maxAttempts) {
@@ -118,6 +190,15 @@ export class FirecrawlService {
           };
         } catch (attemptError: any) {
           console.error(`Error in FirecrawlService (attempt ${attempt}/${maxAttempts}):`, attemptError);
+          
+          // If it's a 403 error, return a user-friendly message
+          if (attemptError.message && (attemptError.message.includes('403') || attemptError.message.includes('Forbidden'))) {
+            return {
+              success: false,
+              error: `O site ${new URL(url).hostname} está bloqueando acesso (403 Forbidden). Por favor, tente um site diferente ou use a função de adicionar manualmente.`
+            };
+          }
+          
           lastError = attemptError;
           // Wait with exponential backoff before retry
           if (attempt < maxAttempts) {
@@ -130,6 +211,15 @@ export class FirecrawlService {
       throw lastError || new Error('Failed to scrape website after multiple attempts');
     } catch (error: any) {
       console.error('Error in FirecrawlService:', error);
+      
+      // Check if it's a 403 error
+      if (error.message && (error.message.includes('403') || error.message.includes('Forbidden'))) {
+        return {
+          success: false,
+          error: `O site está bloqueando acesso (403 Forbidden). Por favor, tente um site diferente ou use a função de adicionar manualmente.`
+        };
+      }
+      
       return {
         success: false,
         error: error.message || 'An unexpected error occurred'
