@@ -31,22 +31,26 @@ serve(async (req) => {
       console.log("Content type:", contentType);
       
       if (contentType.includes("application/json")) {
-        // Get the request body as an object directly
+        // Get the request body as JSON
         try {
           requestBody = await req.json();
-          console.log("Request body parsed as JSON successfully");
+          console.log("JSON request body received, structure:", Object.keys(requestBody));
         } catch (parseError) {
           console.error("JSON parse error:", parseError.message);
           throw new Error(`Invalid JSON format: ${parseError.message}`);
         }
         
         if (!requestBody || !requestBody.image) {
-          console.error("No image data in request body");
+          console.error("Missing image data in request body");
           throw new Error("Missing image data in request");
         }
         
-        imageBase64 = requestBody.image.replace(/^data:image\/[a-z]+;base64,/, "");
-        console.log("Image data length after extraction:", imageBase64.length);
+        // Handle both formats: with or without data:image prefix
+        imageBase64 = requestBody.image.includes("data:image") 
+          ? requestBody.image.split(",")[1] 
+          : requestBody.image;
+          
+        console.log("Image data extracted, length:", imageBase64.length);
       } else {
         console.error("Unsupported content type:", contentType);
         throw new Error(`Unsupported content type: ${contentType}. Expected application/json`);
@@ -61,7 +65,7 @@ serve(async (req) => {
       throw new Error("Invalid image data. Please provide a valid base64 encoded image");
     }
     
-    console.log("Image data extracted successfully, length:", imageBase64.length);
+    console.log("Image data prepared for processing, length:", imageBase64.length);
     const dataUri = `data:image/jpeg;base64,${imageBase64}`;
 
     // Step 1: Use LLaVA-like vision model to identify the species
@@ -73,7 +77,7 @@ serve(async (req) => {
         "Content-Type": "application/json"
       },
       body: JSON.stringify({
-        model: "llama3-8b-8192",
+        model: "llava-1.5-13b-vision-preview",
         messages: [
           {
             role: "system", 
@@ -94,8 +98,8 @@ serve(async (req) => {
 
     if (!visionResponse.ok) {
       const errorText = await visionResponse.text();
-      console.error("Vision API error:", errorText);
-      throw new Error(`Vision API error: ${visionResponse.status}`);
+      console.error("Vision API error:", visionResponse.status, errorText);
+      throw new Error(`Vision API error: ${visionResponse.status}. ${errorText}`);
     }
 
     const visionData = await visionResponse.json();
@@ -129,8 +133,8 @@ serve(async (req) => {
 
     if (!descriptionResponse.ok) {
       const errorText = await descriptionResponse.text();
-      console.error("Description API error:", errorText);
-      throw new Error(`Description API error: ${descriptionResponse.status}`);
+      console.error("Description API error:", descriptionResponse.status, errorText);
+      throw new Error(`Description API error: ${descriptionResponse.status}. ${errorText}`);
     }
 
     const descriptionData = await descriptionResponse.json();
