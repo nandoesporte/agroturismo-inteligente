@@ -40,27 +40,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-
-interface Property {
-  id: string;
-  name: string;
-  location: string;
-  price: number;
-  rating: number;
-  review_count: number;
-  image: string;
-  tags: string[];
-  amenities?: string[];
-  hours?: string;
-  contact?: {
-    phone?: string;
-    email?: string;
-    website?: string;
-  };
-  is_featured: boolean;
-  created_at: string;
-  updated_at: string;
-}
+import { Property } from '@/components/PropertyCard';
 
 const AdminProperties = () => {
   const [properties, setProperties] = useState<Property[]>([]);
