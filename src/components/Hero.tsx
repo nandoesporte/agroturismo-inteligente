@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { ArrowRight, ArrowDown, ChevronDown } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -39,7 +38,6 @@ const Hero = () => {
     }
   ];
 
-  // Auto-rotate slides
   useEffect(() => {
     setIsLoaded(true);
     const interval = setInterval(() => {
@@ -48,7 +46,6 @@ const Hero = () => {
     return () => clearInterval(interval);
   }, [slides.length]);
 
-  // Hide scroll hint after scrolling
   useEffect(() => {
     const handleScroll = () => {
       if (window.scrollY > 100) {
@@ -60,7 +57,6 @@ const Hero = () => {
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
-  // Animation variants
   const fadeIn = {
     hidden: { opacity: 0, y: 20 },
     visible: (i: number) => ({ 
@@ -88,7 +84,6 @@ const Hero = () => {
 
   return (
     <div className="relative h-screen w-full overflow-hidden">
-      {/* Background slides */}
       {slides.map((slide, index) => (
         <div
           key={index}
@@ -110,7 +105,6 @@ const Hero = () => {
         </div>
       ))}
 
-      {/* Content */}
       <div className="relative z-20 h-full flex flex-col items-center justify-center px-4 sm:px-6 lg:px-8 text-center">
         <motion.div 
           className="max-w-4xl mx-auto"
@@ -183,7 +177,6 @@ const Hero = () => {
           </motion.div>
         </motion.div>
 
-        {/* Slide indicators */}
         <div className="absolute bottom-20 sm:bottom-16 left-0 right-0 flex justify-center space-x-1.5">
           {slides.map((_, index) => (
             <button
@@ -200,7 +193,6 @@ const Hero = () => {
           ))}
         </div>
         
-        {/* Scroll indicator - mobile only */}
         {showScrollHint && (
           <motion.div 
             className="absolute bottom-6 left-0 right-0 flex flex-col items-center text-white text-sm md:hidden"
