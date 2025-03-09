@@ -29,8 +29,9 @@ class FirecrawlServiceClass {
     try {
       console.log(`Scraping website: ${url}`);
       
-      // Format the URL to search specifically for agrotourism in Paraná on Trivago if not already a Trivago URL
-      const searchUrl = this.formatTrivagoUrl(url);
+      // For Trivago URLs, use the formatTrivagoUrl function
+      // For other URLs, use as is
+      const searchUrl = url.includes('trivago.com') ? this.formatTrivagoUrl(url) : url;
       console.log(`Formatted search URL: ${searchUrl}`);
       
       // Use a mock response for development/testing since the edge function is returning 404
@@ -40,66 +41,114 @@ class FirecrawlServiceClass {
       // Simulated small delay to mimic API call
       await new Promise(resolve => setTimeout(resolve, 1000));
       
-      // Mock properties based on Trivago agrotourism in Paraná
-      const mockProperties: ExtractedProperty[] = [
-        {
-          name: "Pousada Vale dos Pássaros",
-          description: "Localizada em meio à natureza com vista para as montanhas do Paraná",
-          location: "Morretes, Paraná",
-          price: "R$ 290 por noite",
-          activities: ["Trilhas ecológicas", "Observação de pássaros", "Cachoeiras"],
-          amenities: ["Wi-Fi", "Estacionamento gratuito", "Café da manhã colonial"],
-          hours: "Check-in: 14h / Check-out: 12h",
-          contact: {
-            phone: "(41) 3333-4444",
-            email: "contato@valedospassaros.com.br",
-            website: "https://www.trivago.com.br/hotel/valedospassaros"
+      // Mock properties - use Trivago specific mocks for Trivago URLs,
+      // or generic mocks for other URLs
+      let mockProperties: ExtractedProperty[] = [];
+      
+      if (url.includes('trivago.com')) {
+        // Mock properties based on Trivago agrotourism in Paraná
+        mockProperties = [
+          {
+            name: "Pousada Vale dos Pássaros",
+            description: "Localizada em meio à natureza com vista para as montanhas do Paraná",
+            location: "Morretes, Paraná",
+            price: "R$ 290 por noite",
+            activities: ["Trilhas ecológicas", "Observação de pássaros", "Cachoeiras"],
+            amenities: ["Wi-Fi", "Estacionamento gratuito", "Café da manhã colonial"],
+            hours: "Check-in: 14h / Check-out: 12h",
+            contact: {
+              phone: "(41) 3333-4444",
+              email: "contato@valedospassaros.com.br",
+              website: "https://www.trivago.com.br/hotel/valedospassaros"
+            },
+            image: "https://images.unsplash.com/photo-1615880484746-a134be9a6ecf",
+            images: [
+              "https://images.unsplash.com/photo-1615880484746-a134be9a6ecf",
+              "https://images.unsplash.com/photo-1542718610-a1d656d1884c"
+            ]
           },
-          image: "https://images.unsplash.com/photo-1615880484746-a134be9a6ecf",
-          images: [
-            "https://images.unsplash.com/photo-1615880484746-a134be9a6ecf",
-            "https://images.unsplash.com/photo-1542718610-a1d656d1884c"
-          ]
-        },
-        {
-          name: "Fazenda Ecoturismo Paraná",
-          description: "Experiência rural autêntica com produção orgânica e atividades agrícolas",
-          location: "Lapa, Paraná",
-          price: "R$ 245 por noite",
-          activities: ["Colheita orgânica", "Passeios a cavalo", "Ordenha de vacas"],
-          amenities: ["Refeições caseiras", "Piscina natural", "Chalés privativos"],
-          hours: "Funcionamento: Todos os dias",
-          contact: {
-            phone: "(42) 99876-5432",
-            email: "reservas@fazendaeco.com.br",
-            website: "https://www.trivago.com.br/hotel/fazendaeco"
+          {
+            name: "Fazenda Ecoturismo Paraná",
+            description: "Experiência rural autêntica com produção orgânica e atividades agrícolas",
+            location: "Lapa, Paraná",
+            price: "R$ 245 por noite",
+            activities: ["Colheita orgânica", "Passeios a cavalo", "Ordenha de vacas"],
+            amenities: ["Refeições caseiras", "Piscina natural", "Chalés privativos"],
+            hours: "Funcionamento: Todos os dias",
+            contact: {
+              phone: "(42) 99876-5432",
+              email: "reservas@fazendaeco.com.br",
+              website: "https://www.trivago.com.br/hotel/fazendaeco"
+            },
+            image: "https://images.unsplash.com/photo-1500076656116-558758c991c1",
+            images: [
+              "https://images.unsplash.com/photo-1500076656116-558758c991c1",
+              "https://images.unsplash.com/photo-1510598145-d0b9d7c1a2ad"
+            ]
           },
-          image: "https://images.unsplash.com/photo-1500076656116-558758c991c1",
-          images: [
-            "https://images.unsplash.com/photo-1500076656116-558758c991c1",
-            "https://images.unsplash.com/photo-1510598145-d0b9d7c1a2ad"
-          ]
-        },
-        {
-          name: "Recanto das Araucárias",
-          description: "Pousada em meio às Araucárias nativas do Paraná com gastronomia regional",
-          location: "Prudentópolis, Paraná",
-          price: "R$ 320 por noite",
-          activities: ["Visitação a cachoeiras", "Gastronomia típica", "Caminhadas"],
-          amenities: ["Café colonial", "Lareira", "Wi-Fi nas áreas comuns"],
-          hours: "Check-in: 15h / Check-out: 11h",
-          contact: {
-            phone: "(42) 3446-7890",
-            email: "recanto@araucarias.com.br",
-            website: "https://www.trivago.com.br/hotel/recantoareaucarias"
+          {
+            name: "Recanto das Araucárias",
+            description: "Pousada em meio às Araucárias nativas do Paraná com gastronomia regional",
+            location: "Prudentópolis, Paraná",
+            price: "R$ 320 por noite",
+            activities: ["Visitação a cachoeiras", "Gastronomia típica", "Caminhadas"],
+            amenities: ["Café colonial", "Lareira", "Wi-Fi nas áreas comuns"],
+            hours: "Check-in: 15h / Check-out: 11h",
+            contact: {
+              phone: "(42) 3446-7890",
+              email: "recanto@araucarias.com.br",
+              website: "https://www.trivago.com.br/hotel/recantoareaucarias"
+            },
+            image: "https://images.unsplash.com/photo-1517396751741-21bce539cd9d",
+            images: [
+              "https://images.unsplash.com/photo-1517396751741-21bce539cd9d",
+              "https://images.unsplash.com/photo-1579033385971-a7bc8c6f8c64"
+            ]
+          }
+        ];
+      } else {
+        // Generic mocks for other websites
+        mockProperties = [
+          {
+            name: "Hotel Fazenda Rural",
+            description: "Experiência autêntica no campo com diversas atividades para toda família",
+            location: "Interior do Paraná",
+            price: "R$ 280 por noite",
+            activities: ["Passeios a cavalo", "Pesca", "Trilhas ecológicas"],
+            amenities: ["Piscina", "Wi-Fi", "Café da manhã incluído"],
+            hours: "Check-in: 14h / Check-out: 12h",
+            contact: {
+              phone: "(41) 98765-4321",
+              email: "contato@hotelfazendasite.com.br",
+              website: url
+            },
+            image: "https://images.unsplash.com/photo-1566073771259-6a8506099945",
+            images: [
+              "https://images.unsplash.com/photo-1566073771259-6a8506099945",
+              "https://images.unsplash.com/photo-1566908829550-e6551b00979b"
+            ]
           },
-          image: "https://images.unsplash.com/photo-1517396751741-21bce539cd9d",
-          images: [
-            "https://images.unsplash.com/photo-1517396751741-21bce539cd9d",
-            "https://images.unsplash.com/photo-1579033385971-a7bc8c6f8c64"
-          ]
-        }
-      ];
+          {
+            name: "Pousada Natureza Viva",
+            description: "Conforto e tranquilidade em meio à natureza preservada",
+            location: "Serra do Paraná",
+            price: "R$ 230 por noite",
+            activities: ["Observação de pássaros", "Cachoeiras", "Yoga"],
+            amenities: ["Hidromassagem", "Restaurante orgânico", "Área de meditação"],
+            hours: "Funcionamento: Todos os dias",
+            contact: {
+              phone: "(42) 3333-2222",
+              email: "reservas@naturezaviva.com.br",
+              website: url
+            },
+            image: "https://images.unsplash.com/photo-1521401830884-6c03c1c87ebb",
+            images: [
+              "https://images.unsplash.com/photo-1521401830884-6c03c1c87ebb",
+              "https://images.unsplash.com/photo-1528127269322-539801943592"
+            ]
+          }
+        ];
+      }
       
       // Process and normalize property data
       const properties = this.normalizeProperties(mockProperties);

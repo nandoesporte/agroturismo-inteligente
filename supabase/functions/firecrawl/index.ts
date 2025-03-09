@@ -73,30 +73,28 @@ serve(async (req) => {
       
       console.log(`Reduced content to ${truncatedContent.length} bytes`);
       
-      // Create a specialized prompt for the AI to extract Trivago agrotourism data in Paraná
+      // Create a specialized prompt for the AI to extract property data
       const prompt = `
-        Você é um especialista em extração de dados especializado em turismo rural e agroturismo. Sua tarefa é extrair informações de propriedades de agroturismo no Paraná a partir do site Trivago.
+        Você é um especialista em extração de dados especializado em propriedades de hospedagem e turismo. Sua tarefa é extrair informações de propriedades a partir do conteúdo HTML fornecido.
         
-        Extraia todas as propriedades de turismo rural/agroturismo que você encontrar. Para cada uma, forneça APENAS os seguintes campos:
-        1. Nome (string): Nome da propriedade/pousada rural
-        2. Localização (string): Localização da propriedade (deve ser no Paraná, Brasil)
+        Extraia todas as propriedades/hospedagens que você encontrar. Para cada uma, forneça APENAS os seguintes campos:
+        1. Nome (string): Nome da propriedade/pousada/hotel
+        2. Localização (string): Localização da propriedade
         3. Preço (string): Informação de preço exatamente como aparece (com símbolo de moeda)
         4. Image (string): URL da imagem principal da propriedade
         5. Images (array de strings): URLs de imagens adicionais da propriedade
-        6. Atividades (array de strings): Lista de atividades disponíveis relacionadas ao agroturismo
+        6. Atividades (array de strings): Lista de atividades disponíveis
         7. Comodidades (array de strings): Lista de comodidades como Wi-Fi, Estacionamento, etc.
         8. Informações de contato:
            - Telefone (string): Número de telefone
            - Email (string): Endereço de e-mail
            - Website (string): URL do site
 
-        IMPORTANTE: Filtre apenas propriedades que estejam no estado do Paraná e que sejam de agroturismo ou turismo rural.
-        
         Formate sua resposta como um JSON válido com exatamente esses nomes de campos:
         [
           {
             "name": "Nome da Propriedade",
-            "location": "Cidade, Paraná",
+            "location": "Cidade, Estado",
             "price": "Informação de preço", 
             "image": "url da imagem",
             "images": ["url1", "url2"],
@@ -174,18 +172,14 @@ serve(async (req) => {
         }];
       }
       
-      // Filter properties to ensure they're in Paraná and related to agrotourism
-      const filteredProperties = filterPropertiesForParanaAgrotourism(extractedProperties);
-      console.log(`Filtered to ${filteredProperties.length} properties in Paraná for agrotourism`);
-      
-      // Clean up and normalize the extracted properties
-      const normalizedProperties = normalizeProperties(filteredProperties);
+      // We don't need to filter specifically for Paraná properties since we're now accepting any URL
+      // just normalize the extracted properties
+      const normalizedProperties = normalizeProperties(extractedProperties);
 
       return new Response(
         JSON.stringify({ 
           success: true, 
           properties: normalizedProperties,
-          rawData: aiData,
           endpoint: "GROQ API with Llama 3"
         }),
         { 
@@ -208,32 +202,6 @@ serve(async (req) => {
     );
   }
 });
-
-// Filter function to ensure properties are in Paraná and related to agrotourism
-function filterPropertiesForParanaAgrotourism(properties: ExtractedProperty[]): ExtractedProperty[] {
-  return properties.filter(property => {
-    // Check if location contains Paraná
-    const isInParana = property.location && 
-      property.location.toLowerCase().includes('paraná') || 
-      property.location?.toLowerCase().includes('parana');
-    
-    // Check if property is likely agrotourism based on name or activities
-    const agrotourismKeywords = [
-      'rural', 'fazenda', 'sítio', 'sitio', 'chácara', 'chacara', 
-      'campo', 'agroturismo', 'eco', 'natureza', 'pousada rural'
-    ];
-    
-    const isAgrotourism = 
-      // Check in name
-      (property.name && agrotourismKeywords.some(keyword => 
-        property.name?.toLowerCase().includes(keyword))) ||
-      // Check in activities
-      (property.activities && property.activities.some(activity => 
-        agrotourismKeywords.some(keyword => activity.toLowerCase().includes(keyword))));
-    
-    return isInParana || isAgrotourism;
-  });
-}
 
 // Helper function to extract main content from HTML to reduce token usage
 function extractMainContent(html: string): string {

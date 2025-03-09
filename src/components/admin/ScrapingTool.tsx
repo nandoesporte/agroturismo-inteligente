@@ -31,7 +31,7 @@ interface ScrapingToolProps {
 
 export const ScrapingTool: React.FC<ScrapingToolProps> = ({ onImportProperty }) => {
   const { toast } = useToast();
-  const [customUrl, setCustomUrl] = useState('https://www.trivago.com.br/pt-BR/');
+  const [customUrl, setCustomUrl] = useState('');
   const [selectedUrl, setSelectedUrl] = useState(predefinedUrls[0].url);
   const [isLoading, setIsLoading] = useState(false);
   const [progress, setProgress] = useState(0);
@@ -47,16 +47,7 @@ export const ScrapingTool: React.FC<ScrapingToolProps> = ({ onImportProperty }) 
     if (!urlToScrape) {
       toast({
         title: "URL Inválida",
-        description: "Por favor, insira uma URL válida do Trivago para extrair dados",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    if (!urlToScrape.includes('trivago.com')) {
-      toast({
-        title: "URL Inválida",
-        description: "Por favor, insira apenas URLs do Trivago. Esta ferramenta está otimizada para buscar dados do Trivago.",
+        description: "Por favor, insira uma URL válida para extrair dados",
         variant: "destructive",
       });
       return;
@@ -69,7 +60,7 @@ export const ScrapingTool: React.FC<ScrapingToolProps> = ({ onImportProperty }) 
     
     try {
       toast({
-        title: "Iniciando extração de agroturismo no Paraná",
+        title: "Iniciando extração de dados",
         description: `Analisando dados de ${urlToScrape} com IA`,
       });
 
@@ -81,12 +72,12 @@ export const ScrapingTool: React.FC<ScrapingToolProps> = ({ onImportProperty }) 
         setScrapedProperties(result.properties);
         toast({
           title: "Extração com IA concluída",
-          description: `Encontradas ${result.properties.length} propriedades de agroturismo no Paraná`,
+          description: `Encontradas ${result.properties.length} propriedades`,
         });
       } else {
         toast({
-          title: "Nenhuma propriedade de agroturismo encontrada",
-          description: result.error || "A IA não conseguiu extrair dados de propriedades de agroturismo no Paraná neste site",
+          title: "Nenhuma propriedade encontrada",
+          description: result.error || "A IA não conseguiu extrair dados deste site",
           variant: "destructive",
         });
       }
@@ -157,16 +148,16 @@ export const ScrapingTool: React.FC<ScrapingToolProps> = ({ onImportProperty }) 
   return (
     <Card className="w-full">
       <CardHeader>
-        <CardTitle>Extração de Agroturismo no Paraná - Trivago</CardTitle>
+        <CardTitle>Extração de Dados com IA</CardTitle>
         <CardDescription>
-          Use IA para extrair informações de propriedades de agroturismo no Paraná a partir do Trivago
+          Use IA para extrair informações de propriedades a partir de sites
         </CardDescription>
       </CardHeader>
       <CardContent>
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
           <TabsList className="grid w-full grid-cols-2">
             <TabsTrigger value="predefined">Buscas Predefinidas</TabsTrigger>
-            <TabsTrigger value="custom">URL Personalizada do Trivago</TabsTrigger>
+            <TabsTrigger value="custom">URL Personalizada</TabsTrigger>
           </TabsList>
           
           <TabsContent value="predefined" className="space-y-4">
@@ -194,7 +185,7 @@ export const ScrapingTool: React.FC<ScrapingToolProps> = ({ onImportProperty }) 
                 "Analisando com IA..."
               ) : (
                 <>
-                  <Sparkles className="h-4 w-4 mr-2" /> Extrair Agroturismo com IA
+                  <Sparkles className="h-4 w-4 mr-2" /> Extrair Dados com IA
                 </>
               )}
             </Button>
@@ -202,30 +193,30 @@ export const ScrapingTool: React.FC<ScrapingToolProps> = ({ onImportProperty }) 
           
           <TabsContent value="custom" className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="custom-url">URL do Trivago</Label>
+              <Label htmlFor="custom-url">URL Personalizada</Label>
               <Input
                 id="custom-url"
                 type="url"
                 value={customUrl}
                 onChange={(e) => setCustomUrl(e.target.value)}
-                placeholder="https://www.trivago.com.br/pt-BR/..."
+                placeholder="https://..."
                 className="w-full"
               />
               <p className="text-xs text-muted-foreground">
-                Insira apenas URLs do Trivago. A ferramenta está otimizada para buscar dados de agroturismo no Paraná.
+                Insira qualquer URL de site que contenha dados de propriedades de turismo ou hospedagem.
               </p>
             </div>
             
             <Button
               onClick={() => handleScrape(customUrl)}
-              disabled={isLoading || !customUrl || !customUrl.includes('trivago.com')}
+              disabled={isLoading || !customUrl}
               className="w-full bg-nature-600 hover:bg-nature-700"
             >
               {isLoading ? (
                 "Analisando com IA..."
               ) : (
                 <>
-                  <Sparkles className="h-4 w-4 mr-2" /> Extrair Agroturismo com IA
+                  <Sparkles className="h-4 w-4 mr-2" /> Extrair Dados com IA
                 </>
               )}
             </Button>
@@ -240,7 +231,7 @@ export const ScrapingTool: React.FC<ScrapingToolProps> = ({ onImportProperty }) 
           <div className="mt-6 space-y-4">
             <div className="flex items-center justify-between">
               <h3 className="text-lg font-semibold">
-                Propriedades de Agroturismo Encontradas ({scrapedProperties.length})
+                Propriedades Encontradas ({scrapedProperties.length})
               </h3>
               <Button
                 variant="outline"
@@ -375,11 +366,11 @@ export const ScrapingTool: React.FC<ScrapingToolProps> = ({ onImportProperty }) 
                                 rel="noopener noreferrer"
                                 className="flex items-center gap-1 text-blue-500 hover:underline"
                               >
-                                <ExternalLink size={12} /> Ver no Trivago
+                                <ExternalLink size={12} /> Ver site
                               </a>
                             </TooltipTrigger>
                             <TooltipContent>
-                              <p>Abrir página no Trivago</p>
+                              <p>Abrir página no site</p>
                             </TooltipContent>
                           </Tooltip>
                         </TooltipProvider>
