@@ -87,7 +87,7 @@ serve(async (req) => {
 
     console.log("Sending request to Groq API with messages:", JSON.stringify(messages, null, 2));
 
-    // Make the request to the Groq API
+    // Make the request to the Groq API with increased token limit
     const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
       method: "POST",
       headers: {
@@ -98,7 +98,8 @@ serve(async (req) => {
         model: "llama3-8b-8192",
         messages: messages,
         temperature: 0.7,
-        max_tokens: 1024
+        max_tokens: 2048, // Increased from 1024 to 2048 to allow for longer responses
+        stream: false
       })
     });
 

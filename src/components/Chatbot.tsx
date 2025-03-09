@@ -26,19 +26,19 @@ const Typewriter = ({ message, onComplete }: TypewriterProps) => {
   
   useEffect(() => {
     if (currentIndex < message.length) {
-      const randomDelay = Math.random() * (50 - 20) + 20; // Faster typing for mobile
+      const randomDelay = Math.random() * (40 - 15) + 15; // Slightly faster typing
       
       // Simulate longer pauses at punctuation marks
       if (['.', '!', '?'].includes(message[currentIndex - 1])) {
         setTimeout(() => {
           setDisplayText(message.substring(0, currentIndex + 1));
           setCurrentIndex(currentIndex + 1);
-        }, randomDelay + 200); // Shorter pause at sentence end for mobile
+        }, randomDelay + 150); // Shorter pause at sentence end for better flow
       } else if ([',', ';', ':'].includes(message[currentIndex - 1])) {
         setTimeout(() => {
           setDisplayText(message.substring(0, currentIndex + 1));
           setCurrentIndex(currentIndex + 1);
-        }, randomDelay + 100); // Shorter pause at commas for mobile
+        }, randomDelay + 80); // Shorter pause at commas for better flow
       } else {
         setTimeout(() => {
           setDisplayText(message.substring(0, currentIndex + 1));
@@ -82,9 +82,11 @@ const Chatbot = ({ isMobile = false }: ChatbotProps) => {
   const [isTyping, setIsTyping] = useState(false);
   const [isExpanded, setIsExpanded] = useState(true);
   const [currentTypingIndex, setCurrentTypingIndex] = useState<number | null>(0);
+  const [isLoading, setIsLoading] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
   const chatContainerRef = useRef<HTMLDivElement>(null);
+  const maxContextMessages = 15; // Increased context window
 
   // Auto-scroll to bottom when messages change
   useEffect(() => {
@@ -95,9 +97,9 @@ const Chatbot = ({ isMobile = false }: ChatbotProps) => {
 
   // Prepare context for the API from previous messages
   const prepareContext = () => {
-    // Only include the last 10 messages to avoid token limits
+    // Include more messages in the context
     return messages
-      .slice(-10)
+      .slice(-maxContextMessages)
       .filter(msg => msg.role && msg.content)
       .map(msg => ({
         role: msg.role,
@@ -141,7 +143,7 @@ const Chatbot = ({ isMobile = false }: ChatbotProps) => {
   };
 
   const handleSend = async () => {
-    if (inputValue.trim() === '') return;
+    if (inputValue.trim() === '' || isLoading) return;
     
     // Add user message
     const userMessage: Message = {
@@ -156,6 +158,7 @@ const Chatbot = ({ isMobile = false }: ChatbotProps) => {
     setMessages(prev => [...prev, userMessage]);
     setInputValue('');
     setIsTyping(true);
+    setIsLoading(true);
     
     try {
       // Get response from our assistant
@@ -190,6 +193,7 @@ const Chatbot = ({ isMobile = false }: ChatbotProps) => {
       setMessages(prev => [...prev, errorResponse]);
     } finally {
       setIsTyping(false);
+      setIsLoading(false);
     }
   };
   
@@ -201,6 +205,7 @@ const Chatbot = ({ isMobile = false }: ChatbotProps) => {
   };
   
   const handleSuggestedQuestion = (question: string) => {
+    if (isLoading) return;
     setInputValue(question);
     setTimeout(() => {
       handleSend();
@@ -333,6 +338,7 @@ const Chatbot = ({ isMobile = false }: ChatbotProps) => {
                 key={index}
                 className="text-xs px-2 py-1 md:px-3 md:py-1.5 border border-nature-200 dark:border-nature-800 rounded-full bg-nature-50 dark:bg-nature-900 hover:bg-nature-100 dark:hover:bg-nature-800 text-nature-700 dark:text-nature-300 transition-colors"
                 onClick={() => handleSuggestedQuestion(question)}
+                disabled={isLoading}
               >
                 {question}
               </button>
@@ -354,19 +360,20 @@ const Chatbot = ({ isMobile = false }: ChatbotProps) => {
             onChange={(e) => setInputValue(e.target.value)}
             onKeyDown={handleKeyDown}
             rows={1}
+            disabled={isLoading}
           />
           <button
             onClick={handleSend}
-            disabled={inputValue.trim() === ''}
+            disabled={inputValue.trim() === '' || isLoading}
             className={cn(
               "p-2 rounded-md transition-colors",
-              inputValue.trim() !== ''
+              inputValue.trim() !== '' && !isLoading
                 ? "bg-nature-600 text-white hover:bg-nature-700"
                 : "bg-nature-200 dark:bg-gray-700 text-nature-500 dark:text-gray-400 cursor-not-allowed"
             )}
             aria-label="Enviar mensagem"
           >
-            <Send className="h-5 w-5" />
+            <Send className={cn("h-5 w-5", isLoading && "animate-pulse")} />
           </button>
         </div>
       </div>
