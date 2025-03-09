@@ -60,23 +60,30 @@ serve(async (req) => {
       const htmlContent = await fetchResponse.text();
       console.log(`Successfully fetched ${htmlContent.length} bytes of HTML content`);
       
-      // Truncate content if too large (Llama has token limits)
-      const truncatedContent = htmlContent.length > 30000 
-        ? htmlContent.substring(0, 30000) + "..." 
-        : htmlContent;
+      // Extract only the main content to reduce token usage
+      // Focus on main, article, or div sections with product/property info
+      const mainContent = extractMainContent(htmlContent);
+      
+      // Truncate content more aggressively to stay within token limits
+      // Llama3-8b has 8k token limit, so we need to be very conservative
+      const truncatedContent = mainContent.length > 10000 
+        ? mainContent.substring(0, 10000) + "..." 
+        : mainContent;
+      
+      console.log(`Reduced content to ${truncatedContent.length} bytes`);
       
       // Create a prompt for the AI to extract structured data
       const prompt = `
         You are an expert data extraction AI. I will give you HTML content from a tourism or property website, 
         and I need you to extract structured information about properties, accommodations, or tourism experiences.
         
-        For each property or experience you find, extract:
+        Extract up to 5 properties or experiences you find. For each one, provide:
         1. Name of the property/experience
-        2. Description
+        2. Description (brief, 1-2 sentences)
         3. Location
         4. Price (if available)
-        5. Activities or features (as a list)
-        6. Contact information (phone, email, website)
+        5. Activities or features (up to 5 items)
+        6. Contact information (phone, email, website - if available)
         7. Image URL (if found)
         
         Format your response as a valid JSON array with properties in this exact structure:
@@ -117,14 +124,14 @@ serve(async (req) => {
             { role: "user", content: prompt }
           ],
           temperature: 0.3, // Lower temperature for more consistent output
-          max_tokens: 4000
+          max_tokens: 3000
         })
       });
 
       if (!groqResponse.ok) {
         const errorData = await groqResponse.text();
         console.error("GROQ API error:", errorData);
-        throw new Error(`GROQ API error: ${groqResponse.status}`);
+        throw new Error(`GROQ API error: ${groqResponse.status} - ${errorData}`);
       }
 
       const aiData = await groqResponse.json();
@@ -193,6 +200,45 @@ serve(async (req) => {
     );
   }
 });
+
+// Helper function to extract main content from HTML to reduce token usage
+function extractMainContent(html: string): string {
+  // Try to find and extract content from main sections that likely contain property data
+  const mainContentRegexes = [
+    /<main[^>]*>([\s\S]*?)<\/main>/i,
+    /<article[^>]*>([\s\S]*?)<\/article>/i,
+    /<div[^>]*class="[^"]*content[^"]*"[^>]*>([\s\S]*?)<\/div>/i,
+    /<div[^>]*class="[^"]*product[^"]*"[^>]*>([\s\S]*?)<\/div>/i,
+    /<div[^>]*class="[^"]*property[^"]*"[^>]*>([\s\S]*?)<\/div>/i,
+    /<div[^>]*id="[^"]*content[^"]*"[^>]*>([\s\S]*?)<\/div>/i,
+    /<section[^>]*>([\s\S]*?)<\/section>/i
+  ];
+  
+  // Try each regex pattern to find the main content
+  for (const regex of mainContentRegexes) {
+    const match = html.match(regex);
+    if (match && match[1]) {
+      return match[1];
+    }
+  }
+  
+  // If no specific section matches, remove script and style tags to reduce noise
+  let cleanedHtml = html
+    .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '')
+    .replace(/<style\b[^<]*(?:(?!<\/style>)<[^<]*)*<\/style>/gi, '')
+    .replace(/<header\b[^<]*(?:(?!<\/header>)<[^<]*)*<\/header>/gi, '')
+    .replace(/<footer\b[^<]*(?:(?!<\/footer>)<[^<]*)*<\/footer>/gi, '')
+    .replace(/<nav\b[^<]*(?:(?!<\/nav>)<[^<]*)*<\/nav>/gi, '');
+  
+  // Extract only the body content if possible
+  const bodyMatch = cleanedHtml.match(/<body[^>]*>([\s\S]*?)<\/body>/i);
+  if (bodyMatch && bodyMatch[1]) {
+    return bodyMatch[1];
+  }
+  
+  // Return a shortened version of the cleaned HTML
+  return cleanedHtml.length > 20000 ? cleanedHtml.substring(0, 20000) : cleanedHtml;
+}
 
 // Helper function to normalize the extracted properties
 function normalizeProperties(properties: any[]): ExtractedProperty[] {
