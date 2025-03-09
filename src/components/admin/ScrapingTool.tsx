@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
@@ -17,16 +18,11 @@ import {
 } from "@/components/ui/tooltip";
 
 const predefinedUrls = [
-  { name: "Paraná Turismo", url: "https://www.turismo.pr.gov.br/" },
-  { name: "Viaje Paraná", url: "https://www.viajeparana.com/" },
-  { name: "Rota do Café", url: "https://rotadocafe.tur.br/" },
-  { name: "Rota dos Vinhedos", url: "https://www.rotadosvinhedos.com.br/" },
-  { name: "Turismo Rural Brasil", url: "https://www.turismoruralbrasileiro.com.br/" },
-  { name: "Vinícola Durigan", url: "https://www.vinicoladurigan.com.br/" },
-  { name: "Fazenda Capoava", url: "https://www.fazendacapoava.com.br/" },
-  { name: "Caminhos do Vinho", url: "https://www.caminhosdovinho.org.br/" },
-  { name: "Circuito das Frutas SP", url: "https://circuitodasfrutas.com.br/" },
-  { name: "Circuito das Águas MG", url: "https://circuitodasaguaspaulista.sp.gov.br/" },
+  { name: "Trivago Agroturismo Paraná", url: "https://www.trivago.com.br/pt-BR/srl/hotels-paraná-brasil/agriturismo-pousada-rural?search=paraná%20agroturismo" },
+  { name: "Trivago Pousadas Rurais Paraná", url: "https://www.trivago.com.br/pt-BR/srl/hotels-paraná-brasil/pousada-rural?search=paraná%20pousada%20rural" },
+  { name: "Trivago Fazendas Paraná", url: "https://www.trivago.com.br/pt-BR/srl/hotels-paraná-brasil/fazenda-hotel?search=paraná%20fazenda%20hotel" },
+  { name: "Trivago Hotéis Rurais Paraná", url: "https://www.trivago.com.br/pt-BR/srl/hotels-paraná-brasil/hotel%20rural?search=paraná%20hotel%20rural" },
+  { name: "Trivago Ecoturismo Paraná", url: "https://www.trivago.com.br/pt-BR/srl/hotels-paraná-brasil/eco%20resort?search=paraná%20ecoturismo" }
 ];
 
 interface ScrapingToolProps {
@@ -35,14 +31,13 @@ interface ScrapingToolProps {
 
 export const ScrapingTool: React.FC<ScrapingToolProps> = ({ onImportProperty }) => {
   const { toast } = useToast();
-  const [customUrl, setCustomUrl] = useState('');
+  const [customUrl, setCustomUrl] = useState('https://www.trivago.com.br/pt-BR/');
   const [selectedUrl, setSelectedUrl] = useState(predefinedUrls[0].url);
   const [isLoading, setIsLoading] = useState(false);
   const [progress, setProgress] = useState(0);
   const [scrapedProperties, setScrapedProperties] = useState<ExtractedProperty[]>([]);
   const [selectedProperties, setSelectedProperties] = useState<Record<number, boolean>>({});
   const [activeTab, setActiveTab] = useState("predefined");
-  const [currentTab, setCurrentTab] = useState<string>("predefined");
 
   const handleUrlSelect = (url: string) => {
     setSelectedUrl(url);
@@ -52,7 +47,16 @@ export const ScrapingTool: React.FC<ScrapingToolProps> = ({ onImportProperty }) 
     if (!urlToScrape) {
       toast({
         title: "URL Inválida",
-        description: "Por favor, insira uma URL válida para extrair dados",
+        description: "Por favor, insira uma URL válida do Trivago para extrair dados",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (!urlToScrape.includes('trivago.com')) {
+      toast({
+        title: "URL Inválida",
+        description: "Por favor, insira apenas URLs do Trivago. Esta ferramenta está otimizada para buscar dados do Trivago.",
         variant: "destructive",
       });
       return;
@@ -65,8 +69,8 @@ export const ScrapingTool: React.FC<ScrapingToolProps> = ({ onImportProperty }) 
     
     try {
       toast({
-        title: "Iniciando extração de dados com IA",
-        description: `Analisando dados de ${urlToScrape}`,
+        title: "Iniciando extração de agroturismo no Paraná",
+        description: `Analisando dados de ${urlToScrape} com IA`,
       });
 
       setProgress(30);
@@ -77,12 +81,12 @@ export const ScrapingTool: React.FC<ScrapingToolProps> = ({ onImportProperty }) 
         setScrapedProperties(result.properties);
         toast({
           title: "Extração com IA concluída",
-          description: `Encontradas ${result.properties.length} propriedades`,
+          description: `Encontradas ${result.properties.length} propriedades de agroturismo no Paraná`,
         });
       } else {
         toast({
-          title: "Nenhum dado encontrado",
-          description: result.error || "A IA não conseguiu extrair dados de propriedades neste site",
+          title: "Nenhuma propriedade de agroturismo encontrada",
+          description: result.error || "A IA não conseguiu extrair dados de propriedades de agroturismo no Paraná neste site",
           variant: "destructive",
         });
       }
@@ -126,6 +130,7 @@ export const ScrapingTool: React.FC<ScrapingToolProps> = ({ onImportProperty }) 
         location: property.location || '',
         price: property.price ? parseFloat(property.price.replace(/[^\d.,]/g, '').replace(',', '.')) || 0 : 0,
         image: property.image || '',
+        images: property.images || [],
         tags: property.activities || [],
         amenities: property.amenities || [],
         hours: property.hours || '',
@@ -152,20 +157,20 @@ export const ScrapingTool: React.FC<ScrapingToolProps> = ({ onImportProperty }) 
   return (
     <Card className="w-full">
       <CardHeader>
-        <CardTitle>Ferramenta de Extração de Dados com IA</CardTitle>
+        <CardTitle>Extração de Agroturismo no Paraná - Trivago</CardTitle>
         <CardDescription>
-          Use IA para extrair informações sobre propriedades de agroturismo de sites específicos
+          Use IA para extrair informações de propriedades de agroturismo no Paraná a partir do Trivago
         </CardDescription>
       </CardHeader>
       <CardContent>
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
           <TabsList className="grid w-full grid-cols-2">
-            <TabsTrigger value="predefined">Sites Predefinidos</TabsTrigger>
-            <TabsTrigger value="custom">URL Personalizada</TabsTrigger>
+            <TabsTrigger value="predefined">Buscas Predefinidas</TabsTrigger>
+            <TabsTrigger value="custom">URL Personalizada do Trivago</TabsTrigger>
           </TabsList>
           
           <TabsContent value="predefined" className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+            <div className="grid grid-cols-1 gap-2">
               {predefinedUrls.map((site) => (
                 <div 
                   key={site.url}
@@ -189,7 +194,7 @@ export const ScrapingTool: React.FC<ScrapingToolProps> = ({ onImportProperty }) 
                 "Analisando com IA..."
               ) : (
                 <>
-                  <Sparkles className="h-4 w-4 mr-2" /> Extrair com IA
+                  <Sparkles className="h-4 w-4 mr-2" /> Extrair Agroturismo com IA
                 </>
               )}
             </Button>
@@ -197,27 +202,30 @@ export const ScrapingTool: React.FC<ScrapingToolProps> = ({ onImportProperty }) 
           
           <TabsContent value="custom" className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="custom-url">URL do Site</Label>
+              <Label htmlFor="custom-url">URL do Trivago</Label>
               <Input
                 id="custom-url"
                 type="url"
                 value={customUrl}
                 onChange={(e) => setCustomUrl(e.target.value)}
-                placeholder="https://exemplo.com.br"
+                placeholder="https://www.trivago.com.br/pt-BR/..."
                 className="w-full"
               />
+              <p className="text-xs text-muted-foreground">
+                Insira apenas URLs do Trivago. A ferramenta está otimizada para buscar dados de agroturismo no Paraná.
+              </p>
             </div>
             
             <Button
               onClick={() => handleScrape(customUrl)}
-              disabled={isLoading || !customUrl}
+              disabled={isLoading || !customUrl || !customUrl.includes('trivago.com')}
               className="w-full bg-nature-600 hover:bg-nature-700"
             >
               {isLoading ? (
                 "Analisando com IA..."
               ) : (
                 <>
-                  <Sparkles className="h-4 w-4 mr-2" /> Extrair com IA
+                  <Sparkles className="h-4 w-4 mr-2" /> Extrair Agroturismo com IA
                 </>
               )}
             </Button>
@@ -232,7 +240,7 @@ export const ScrapingTool: React.FC<ScrapingToolProps> = ({ onImportProperty }) 
           <div className="mt-6 space-y-4">
             <div className="flex items-center justify-between">
               <h3 className="text-lg font-semibold">
-                Propriedades Encontradas ({scrapedProperties.length})
+                Propriedades de Agroturismo Encontradas ({scrapedProperties.length})
               </h3>
               <Button
                 variant="outline"
@@ -267,10 +275,6 @@ export const ScrapingTool: React.FC<ScrapingToolProps> = ({ onImportProperty }) 
                         </span>
                       )}
                     </div>
-                    
-                    <p className="text-sm mt-1 line-clamp-2">
-                      {property.description || "Sem descrição disponível"}
-                    </p>
                     
                     {/* Activities */}
                     {property.activities && property.activities.length > 0 && (
@@ -321,7 +325,7 @@ export const ScrapingTool: React.FC<ScrapingToolProps> = ({ onImportProperty }) 
                           <Tooltip>
                             <TooltipTrigger asChild>
                               <span className="flex items-center gap-1 text-blue-600">
-                                <Info size={12} /> Imagem
+                                <Info size={12} /> Imagem disponível
                               </span>
                             </TooltipTrigger>
                             <TooltipContent>
@@ -365,12 +369,17 @@ export const ScrapingTool: React.FC<ScrapingToolProps> = ({ onImportProperty }) 
                         <TooltipProvider>
                           <Tooltip>
                             <TooltipTrigger asChild>
-                              <span className="flex items-center gap-1">
-                                <ExternalLink size={12} /> Site
-                              </span>
+                              <a 
+                                href={property.contact.website} 
+                                target="_blank" 
+                                rel="noopener noreferrer"
+                                className="flex items-center gap-1 text-blue-500 hover:underline"
+                              >
+                                <ExternalLink size={12} /> Ver no Trivago
+                              </a>
                             </TooltipTrigger>
                             <TooltipContent>
-                              <p>Website disponível</p>
+                              <p>Abrir página no Trivago</p>
                             </TooltipContent>
                           </Tooltip>
                         </TooltipProvider>

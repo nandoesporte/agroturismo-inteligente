@@ -1,4 +1,3 @@
-
 // Add any necessary imports here if needed
 
 export interface ExtractedProperty {
@@ -19,6 +18,8 @@ export interface ExtractedProperty {
 }
 
 class FirecrawlServiceClass {
+  private trivagoUrl = "https://www.trivago.com.br";
+  
   async scrapeWebsite(url: string): Promise<{ 
     success: boolean; 
     properties?: ExtractedProperty[]; 
@@ -27,13 +28,17 @@ class FirecrawlServiceClass {
     try {
       console.log(`Scraping website: ${url}`);
       
+      // Format the URL to search specifically for agrotourism in Paraná on Trivago if not already a Trivago URL
+      const searchUrl = this.formatTrivagoUrl(url);
+      console.log(`Formatted search URL: ${searchUrl}`);
+      
       const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/firecrawl`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`
         },
-        body: JSON.stringify({ url })
+        body: JSON.stringify({ url: searchUrl })
       });
       
       if (!response.ok) {
@@ -66,6 +71,16 @@ class FirecrawlServiceClass {
         error: error.message || 'Erro ao extrair dados do site'
       };
     }
+  }
+  
+  private formatTrivagoUrl(url: string): string {
+    // If the URL is already from Trivago, use it directly
+    if (url.includes('trivago.com')) {
+      return url;
+    }
+    
+    // Otherwise, create a Trivago search URL for agrotourism in Paraná
+    return `${this.trivagoUrl}/pt-BR/srl/hotels-paraná-brasil/agriturismo-pousada-rural?search=paraná%20agroturismo`;
   }
   
   private normalizeProperties(properties: ExtractedProperty[]): ExtractedProperty[] {

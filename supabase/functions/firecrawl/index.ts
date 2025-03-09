@@ -1,3 +1,4 @@
+
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 
 const corsHeaders = {
@@ -19,6 +20,7 @@ type ExtractedProperty = {
     website?: string;
   };
   image?: string;
+  images?: string[];
 };
 
 serve(async (req) => {
@@ -71,30 +73,33 @@ serve(async (req) => {
       
       console.log(`Reduced content to ${truncatedContent.length} bytes`);
       
-      // Create a specialized prompt for the AI to extract structured data with our specific fields
+      // Create a specialized prompt for the AI to extract Trivago agrotourism data in Paraná
       const prompt = `
-        Você é um especialista em extração de dados. O seu trabalho é analisar o conteúdo de sites de turismo rural e propriedades rurais para extrair informações estruturadas.
+        Você é um especialista em extração de dados especializado em turismo rural e agroturismo. Sua tarefa é extrair informações de propriedades de agroturismo no Paraná a partir do site Trivago.
         
-        Extraia até 5 propriedades ou experiências que você encontrar. Para cada uma, forneça APENAS os seguintes campos:
-        1. Nome (string): Nome da propriedade/experiência
-        2. Localização (string): Localização da propriedade (cidade, estado)
-        3. Preço (string): Informação de preço exatamente como aparece (com símbolo de moeda se presente)
+        Extraia todas as propriedades de turismo rural/agroturismo que você encontrar. Para cada uma, forneça APENAS os seguintes campos:
+        1. Nome (string): Nome da propriedade/pousada rural
+        2. Localização (string): Localização da propriedade (deve ser no Paraná, Brasil)
+        3. Preço (string): Informação de preço exatamente como aparece (com símbolo de moeda)
         4. Image (string): URL da imagem principal da propriedade
-        5. Atividades (array de strings): Lista de até 5 atividades disponíveis
-        6. Comodidades (array de strings): Lista de até 5 comodidades como Wi-Fi, Estacionamento, etc.
-        7. Horário de Funcionamento (string): Informação sobre horários de funcionamento
+        5. Images (array de strings): URLs de imagens adicionais da propriedade
+        6. Atividades (array de strings): Lista de atividades disponíveis relacionadas ao agroturismo
+        7. Comodidades (array de strings): Lista de comodidades como Wi-Fi, Estacionamento, etc.
         8. Informações de contato:
            - Telefone (string): Número de telefone
            - Email (string): Endereço de e-mail
            - Website (string): URL do site
 
+        IMPORTANTE: Filtre apenas propriedades que estejam no estado do Paraná e que sejam de agroturismo ou turismo rural.
+        
         Formate sua resposta como um JSON válido com exatamente esses nomes de campos:
         [
           {
             "name": "Nome da Propriedade",
-            "location": "Detalhes da localização",
+            "location": "Cidade, Paraná",
             "price": "Informação de preço", 
             "image": "url da imagem",
+            "images": ["url1", "url2"],
             "activities": ["atividade1", "atividade2"],
             "amenities": ["comodidade1", "comodidade2"],
             "hours": "Informação sobre horários",
@@ -169,8 +174,12 @@ serve(async (req) => {
         }];
       }
       
+      // Filter properties to ensure they're in Paraná and related to agrotourism
+      const filteredProperties = filterPropertiesForParanaAgrotourism(extractedProperties);
+      console.log(`Filtered to ${filteredProperties.length} properties in Paraná for agrotourism`);
+      
       // Clean up and normalize the extracted properties
-      const normalizedProperties = normalizeProperties(extractedProperties);
+      const normalizedProperties = normalizeProperties(filteredProperties);
 
       return new Response(
         JSON.stringify({ 
@@ -200,21 +209,45 @@ serve(async (req) => {
   }
 });
 
+// Filter function to ensure properties are in Paraná and related to agrotourism
+function filterPropertiesForParanaAgrotourism(properties: ExtractedProperty[]): ExtractedProperty[] {
+  return properties.filter(property => {
+    // Check if location contains Paraná
+    const isInParana = property.location && 
+      property.location.toLowerCase().includes('paraná') || 
+      property.location?.toLowerCase().includes('parana');
+    
+    // Check if property is likely agrotourism based on name or activities
+    const agrotourismKeywords = [
+      'rural', 'fazenda', 'sítio', 'sitio', 'chácara', 'chacara', 
+      'campo', 'agroturismo', 'eco', 'natureza', 'pousada rural'
+    ];
+    
+    const isAgrotourism = 
+      // Check in name
+      (property.name && agrotourismKeywords.some(keyword => 
+        property.name?.toLowerCase().includes(keyword))) ||
+      // Check in activities
+      (property.activities && property.activities.some(activity => 
+        agrotourismKeywords.some(keyword => activity.toLowerCase().includes(keyword))));
+    
+    return isInParana || isAgrotourism;
+  });
+}
+
 // Helper function to extract main content from HTML to reduce token usage
 function extractMainContent(html: string): string {
-  // Try to find and extract content from main sections that likely contain property data
-  const mainContentRegexes = [
+  // Focus on product listings and accommodations
+  const accommodationRegexes = [
+    /<div[^>]*class="[^"]*accommodation-list[^"]*"[^>]*>([\s\S]*?)<\/div>/i,
+    /<div[^>]*class="[^"]*hotel-list[^"]*"[^>]*>([\s\S]*?)<\/div>/i,
+    /<div[^>]*class="[^"]*property-list[^"]*"[^>]*>([\s\S]*?)<\/div>/i,
+    /<div[^>]*class="[^"]*search-results[^"]*"[^>]*>([\s\S]*?)<\/div>/i,
     /<main[^>]*>([\s\S]*?)<\/main>/i,
-    /<article[^>]*>([\s\S]*?)<\/article>/i,
-    /<div[^>]*class="[^"]*content[^"]*"[^>]*>([\s\S]*?)<\/div>/i,
-    /<div[^>]*class="[^"]*product[^"]*"[^>]*>([\s\S]*?)<\/div>/i,
-    /<div[^>]*class="[^"]*property[^"]*"[^>]*>([\s\S]*?)<\/div>/i,
-    /<div[^>]*id="[^"]*content[^"]*"[^>]*>([\s\S]*?)<\/div>/i,
-    /<section[^>]*>([\s\S]*?)<\/section>/i
   ];
   
   // Try each regex pattern to find the main content
-  for (const regex of mainContentRegexes) {
+  for (const regex of accommodationRegexes) {
     const match = html.match(regex);
     if (match && match[1]) {
       return match[1];
@@ -251,6 +284,7 @@ function normalizeProperties(properties: any[]): ExtractedProperty[] {
       amenities: normalizeArray(property.amenities),
       hours: normalizeText(property.hours),
       image: normalizeUrl(property.image),
+      images: Array.isArray(property.images) ? property.images.map(normalizeUrl) : [],
       contact: {
         phone: normalizeText(property.contact?.phone),
         email: normalizeText(property.contact?.email),
