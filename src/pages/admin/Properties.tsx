@@ -125,7 +125,7 @@ const AdminProperties = () => {
       contact_phone: property.contact?.phone || '',
       contact_email: property.contact?.email || '',
       contact_website: property.contact?.website || '',
-      is_featured: property.is_featured
+      is_featured: property.isFeatured || false
     });
     setOpenDialog(true);
   };
@@ -792,7 +792,7 @@ const AdminProperties = () => {
                             <span className="text-amber-500">★</span>
                             <span className="ml-1">{property.rating.toFixed(1)}</span>
                             <span className="text-xs text-muted-foreground ml-1">
-                              ({property.review_count})
+                              ({property.reviewCount})
                             </span>
                           </div>
                         ) : (
@@ -800,7 +800,7 @@ const AdminProperties = () => {
                         )}
                       </TableCell>
                       <TableCell className="text-center hidden sm:table-cell">
-                        {property.is_featured ? (
+                        {property.isFeatured ? (
                           <div className="bg-green-100 text-green-800 text-xs font-medium px-2 py-0.5 rounded-full inline-block">
                             Sim
                           </div>

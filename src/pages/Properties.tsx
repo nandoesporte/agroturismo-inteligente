@@ -59,7 +59,10 @@ const Properties = () => {
         image: item.image || 'https://images.unsplash.com/photo-1566043641507-95a1226a03c1?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1470&q=80',
         images: item.images || [],
         tags: item.tags || [],
-        isFeatured: item.is_featured
+        isFeatured: item.is_featured,
+        amenities: item.amenities,
+        hours: item.hours,
+        contact: item.contact
       }));
       
       setProperties(transformedProperties);

@@ -14,9 +14,18 @@ export interface Property {
   rating: number;
   reviewCount: number;
   image: string;
-  images?: string[]; // Add the missing images property
+  images?: string[];
   tags: string[];
+  amenities?: string[];
+  hours?: string;
+  contact?: {
+    phone?: string;
+    email?: string;
+    website?: string;
+  };
   isFeatured?: boolean;
+  created_at?: string;
+  updated_at?: string;
 }
 
 interface PropertyCardProps {
