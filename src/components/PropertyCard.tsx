@@ -14,7 +14,7 @@ export interface Property {
   rating: number;
   reviewCount: number;
   image: string;
-  images?: string[];
+  images?: string[]; // Add the missing images property
   tags: string[];
   isFeatured?: boolean;
 }
