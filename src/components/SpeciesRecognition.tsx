@@ -128,19 +128,26 @@ const SpeciesRecognition = () => {
       formData.append('image', blob, 'image.jpg');
       
       // Send to Supabase edge function
-      const response = await supabase.functions.invoke('species-recognition', {
+      const { data, error: functionError } = await supabase.functions.invoke('species-recognition', {
         body: formData,
         headers: {
           'Content-Type': 'multipart/form-data',
         },
       });
       
-      if (response.error) {
-        throw new Error(response.error.message);
+      if (functionError) {
+        console.error('Edge function error:', functionError);
+        throw new Error(functionError.message || 'Erro ao processar imagem');
       }
       
-      setSpeciesInfo(response.data);
+      if (data.error) {
+        console.error('API error:', data.error, data.details);
+        throw new Error(data.error);
+      }
+      
+      setSpeciesInfo(data);
       setDialogOpen(true);
+      toast.success('Espécie identificada com sucesso!');
     } catch (err) {
       console.error('Erro ao processar imagem:', err);
       setError('Ocorreu um erro ao analisar a imagem. Por favor, tente novamente.');
