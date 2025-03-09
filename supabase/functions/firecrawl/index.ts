@@ -55,10 +55,26 @@ serve(async (req) => {
     // First, fetch the HTML content of the website
     try {
       console.log(`Fetching content from URL: ${url}`);
-      const fetchResponse = await fetch(url);
+      
+      // Add timeout and better error handling for fetch
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 15000); // 15 second timeout
+      
+      const fetchResponse = await fetch(url, {
+        signal: controller.signal,
+        headers: {
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
+        }
+      }).catch(error => {
+        console.error(`Fetch error: ${error.message}`);
+        throw new Error(`Failed to fetch website content: ${error.message}`);
+      });
+      
+      clearTimeout(timeoutId);
       
       if (!fetchResponse.ok) {
-        throw new Error(`Failed to fetch URL content: ${fetchResponse.status}`);
+        console.error(`HTTP error: ${fetchResponse.status} ${fetchResponse.statusText}`);
+        throw new Error(`Failed to fetch URL content: ${fetchResponse.status} ${fetchResponse.statusText}`);
       }
       
       const htmlContent = await fetchResponse.text();
@@ -118,85 +134,167 @@ serve(async (req) => {
       console.log("Sending request to GROQ API for extraction");
       
       // Make the request to the Groq API with Llama model
-      const groqResponse = await fetch("https://api.groq.com/openai/v1/chat/completions", {
-        method: "POST",
-        headers: {
-          "Authorization": `Bearer ${GROQ_API_KEY}`,
-          "Content-Type": "application/json"
-        },
-        body: JSON.stringify({
-          model: "llama3-8b-8192",
-          messages: [
-            { role: "user", content: prompt + "\n\nHere is the content to extract from:\n\n" + truncatedContent }
-          ],
-          temperature: 0.2, // Lower temperature for more consistent structured output
-          max_tokens: 4000  // Increased to allow for more properties
-        })
-      });
-
-      if (!groqResponse.ok) {
-        const errorData = await groqResponse.text();
-        console.error("GROQ API error:", errorData);
-        throw new Error(`GROQ API error: ${groqResponse.status} - ${errorData}`);
-      }
-
-      const aiData = await groqResponse.json();
-      console.log("Received response from GROQ API");
-      
-      let extractedProperties: ExtractedProperty[] = [];
+      // Add timeouts and better error handling
+      const groqController = new AbortController();
+      const groqTimeoutId = setTimeout(() => groqController.abort(), 60000); // 60 second timeout
       
       try {
-        // Extract the JSON part from the AI response
-        const responseContent = aiData.choices[0].message.content;
+        const groqResponse = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+          method: "POST",
+          headers: {
+            "Authorization": `Bearer ${GROQ_API_KEY}`,
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify({
+            model: "llama3-8b-8192",
+            messages: [
+              { role: "user", content: prompt + "\n\nHere is the content to extract from:\n\n" + truncatedContent }
+            ],
+            temperature: 0.2, // Lower temperature for more consistent structured output
+            max_tokens: 4000  // Increased to allow for more properties
+          }),
+          signal: groqController.signal
+        });
         
-        // Look for JSON in the response (it might have text around it)
-        const jsonMatch = responseContent.match(/\[[\s\S]*\]/);
-        
-        if (jsonMatch) {
-          extractedProperties = JSON.parse(jsonMatch[0]);
-          console.log(`Successfully parsed ${extractedProperties.length} properties from AI response`);
-        } else {
-          console.log("No JSON array found in AI response, attempting to parse entire response");
-          // If no clear JSON array is found, try to parse the whole response
-          extractedProperties = JSON.parse(responseContent);
-        }
-      } catch (parseError) {
-        console.error("Error parsing AI response:", parseError);
-        console.log("AI response content:", aiData.choices[0].message.content);
-        
-        // Create a fallback property if parsing fails
-        extractedProperties = [{
-          name: "Website Content",
-          description: "Unable to extract structured data. Consider reviewing the website manually.",
-          location: url,
-          contact: {
-            website: url
-          }
-        }];
-      }
-      
-      // Normalize the extracted properties
-      const normalizedProperties = normalizeProperties(extractedProperties);
+        clearTimeout(groqTimeoutId);
 
+        if (!groqResponse.ok) {
+          const errorData = await groqResponse.text();
+          console.error(`GROQ API error (${groqResponse.status}): ${errorData}`);
+          throw new Error(`GROQ API error: ${groqResponse.status} - ${errorData}`);
+        }
+
+        const aiData = await groqResponse.json();
+        console.log("Received response from GROQ API");
+        
+        let extractedProperties: ExtractedProperty[] = [];
+        
+        try {
+          // Extract the JSON part from the AI response
+          const responseContent = aiData.choices[0].message.content;
+          
+          // Look for JSON in the response (it might have text around it)
+          const jsonMatch = responseContent.match(/\[[\s\S]*\]/);
+          
+          if (jsonMatch) {
+            extractedProperties = JSON.parse(jsonMatch[0]);
+            console.log(`Successfully parsed ${extractedProperties.length} properties from AI response`);
+          } else {
+            console.log("No JSON array found in AI response, attempting to parse entire response");
+            // If no clear JSON array is found, try to parse the whole response
+            extractedProperties = JSON.parse(responseContent);
+          }
+        } catch (parseError) {
+          console.error(`Error parsing AI response: ${parseError.message}`);
+          console.log("AI response content:", aiData.choices[0].message.content);
+          
+          // Create fallback properties if parsing fails
+          // Use a more robust fallback strategy
+          try {
+            // Try to extract any JSON objects from the response
+            const content = aiData.choices[0].message.content;
+            const jsonObjects = content.match(/\{[^{}]*\}/g);
+            
+            if (jsonObjects && jsonObjects.length > 0) {
+              // Try to extract individual properties
+              extractedProperties = jsonObjects.map(jsonStr => {
+                try {
+                  return JSON.parse(jsonStr);
+                } catch (e) {
+                  return null;
+                }
+              }).filter(Boolean);
+              
+              console.log(`Extracted ${extractedProperties.length} properties using fallback method`);
+            }
+            
+            // If still no properties, provide a generic fallback
+            if (extractedProperties.length === 0) {
+              extractedProperties = [{
+                name: "Website Content",
+                description: "Unable to extract structured data. Consider reviewing the website manually.",
+                location: url,
+                contact: {
+                  website: url
+                }
+              }];
+            }
+          } catch (fallbackError) {
+            console.error(`Fallback parsing also failed: ${fallbackError.message}`);
+            extractedProperties = [{
+              name: "Website Content",
+              description: "Unable to extract structured data. Consider reviewing the website manually.",
+              location: url,
+              contact: {
+                website: url
+              }
+            }];
+          }
+        }
+        
+        // Normalize the extracted properties
+        const normalizedProperties = normalizeProperties(extractedProperties);
+
+        return new Response(
+          JSON.stringify({ 
+            success: true, 
+            properties: normalizedProperties,
+            endpoint: "GROQ API with Llama 3"
+          }),
+          { 
+            headers: { ...corsHeaders, "Content-Type": "application/json" } 
+          }
+        );
+      } catch (groqError) {
+        clearTimeout(groqTimeoutId);
+        console.error(`GROQ API request failed: ${groqError.message}`);
+        
+        // Provide a more specific error response
+        if (groqError.name === 'AbortError') {
+          return new Response(
+            JSON.stringify({ 
+              success: false, 
+              error: "GROQ API request timed out after 60 seconds" 
+            }),
+            { 
+              status: 504, 
+              headers: { ...corsHeaders, "Content-Type": "application/json" } 
+            }
+          );
+        }
+        
+        return new Response(
+          JSON.stringify({ 
+            success: false, 
+            error: `GROQ API error: ${groqError.message}` 
+          }),
+          { 
+            status: 500, 
+            headers: { ...corsHeaders, "Content-Type": "application/json" } 
+          }
+        );
+      }
+
+    } catch (fetchError) {
+      console.error(`Error fetching website: ${fetchError.message}`);
       return new Response(
         JSON.stringify({ 
-          success: true, 
-          properties: normalizedProperties,
-          endpoint: "GROQ API with Llama 3"
+          success: false, 
+          error: `Failed to fetch website content: ${fetchError.message}` 
         }),
         { 
+          status: 500, 
           headers: { ...corsHeaders, "Content-Type": "application/json" } 
         }
       );
-
-    } catch (fetchError) {
-      console.error("Error fetching website:", fetchError.message);
-      throw new Error(`Failed to fetch website content: ${fetchError.message}`);
     }
   } catch (error) {
-    console.error("Error:", error.message);
+    console.error(`General error: ${error.message}`);
     return new Response(
-      JSON.stringify({ error: error.message }),
+      JSON.stringify({ 
+        success: false, 
+        error: `An unexpected error occurred: ${error.message}` 
+      }),
       { 
         status: 500,
         headers: { ...corsHeaders, "Content-Type": "application/json" }
@@ -214,6 +312,10 @@ function extractMainContent(html: string): string {
     /<div[^>]*class="[^"]*property-list[^"]*"[^>]*>([\s\S]*?)<\/div>/i,
     /<div[^>]*class="[^"]*search-results[^"]*"[^>]*>([\s\S]*?)<\/div>/i,
     /<main[^>]*>([\s\S]*?)<\/main>/i,
+    /<article[^>]*>([\s\S]*?)<\/article>/i,
+    /<section[^>]*>([\s\S]*?)<\/section>/i,
+    /<div[^>]*class="[^"]*content[^"]*"[^>]*>([\s\S]*?)<\/div>/i,
+    /<div[^>]*class="[^"]*container[^"]*"[^>]*>([\s\S]*?)<\/div>/i,
   ];
   
   // Try each regex pattern to find the main content

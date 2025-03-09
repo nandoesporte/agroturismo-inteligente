@@ -53,33 +53,65 @@ export class FirecrawlService {
     try {
       console.log(`Starting Firecrawl scraping for URL: ${url}`);
       
-      // Call the Supabase Edge Function
-      const { data, error } = await supabase.functions.invoke('firecrawl', {
-        body: { url },
-      });
+      // Add retry mechanism for resilience
+      let attempt = 0;
+      const maxAttempts = 3;
+      let lastError: Error | null = null;
       
-      if (error) {
-        console.error('Error calling Firecrawl edge function:', error);
-        throw new Error(`Failed to scrape website: ${error.message}`);
-      }
-      
-      if (!data || !data.success) {
-        console.error('Firecrawl returned an error:', data?.error || 'Unknown error');
-        throw new Error(data?.error || 'Failed to extract data from the website');
-      }
-      
-      // Process properties, ensuring they have types assigned
-      const properties = (data.properties || []).map((property: ExtractedProperty) => {
-        if (!property.type) {
-          property.type = categorizeProperty(property);
+      while (attempt < maxAttempts) {
+        attempt++;
+        try {
+          // Call the Supabase Edge Function with timeout
+          const { data, error } = await supabase.functions.invoke('firecrawl', {
+            body: { url },
+          });
+          
+          if (error) {
+            console.error(`Error calling Firecrawl edge function (attempt ${attempt}/${maxAttempts}):`, error);
+            lastError = new Error(`Failed to scrape website: ${error.message}`);
+            // Wait before retry
+            if (attempt < maxAttempts) {
+              await new Promise(resolve => setTimeout(resolve, 1000 * attempt));
+              continue;
+            }
+            throw lastError;
+          }
+          
+          if (!data || !data.success) {
+            console.error(`Firecrawl returned an error (attempt ${attempt}/${maxAttempts}):`, data?.error || 'Unknown error');
+            lastError = new Error(data?.error || 'Failed to extract data from the website');
+            // Wait before retry
+            if (attempt < maxAttempts) {
+              await new Promise(resolve => setTimeout(resolve, 1000 * attempt));
+              continue;
+            }
+            throw lastError;
+          }
+          
+          // Process properties, ensuring they have types assigned
+          const properties = (data.properties || []).map((property: ExtractedProperty) => {
+            if (!property.type) {
+              property.type = categorizeProperty(property);
+            }
+            return property;
+          });
+          
+          return {
+            success: true,
+            properties
+          };
+        } catch (attemptError: any) {
+          console.error(`Error in FirecrawlService (attempt ${attempt}/${maxAttempts}):`, attemptError);
+          lastError = attemptError;
+          // Wait before retry
+          if (attempt < maxAttempts) {
+            await new Promise(resolve => setTimeout(resolve, 1000 * attempt));
+          }
         }
-        return property;
-      });
+      }
       
-      return {
-        success: true,
-        properties
-      };
+      // All attempts failed
+      throw lastError || new Error('Failed to scrape website after multiple attempts');
     } catch (error: any) {
       console.error('Error in FirecrawlService:', error);
       return {
