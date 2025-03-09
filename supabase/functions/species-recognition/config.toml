@@ -1,3 +1,7 @@
 
 project_id = "jigeusdwsfwstggdngww"
 app_version = "1.0.0"
+
+[[fetch.domains]]
+domain = "api.groq.com"
+priority = 1
