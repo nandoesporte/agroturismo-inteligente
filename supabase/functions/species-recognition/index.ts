@@ -69,7 +69,7 @@ serve(async (req) => {
     console.log("Image data prepared for processing, length:", imageBase64.length);
     const dataUri = `data:image/jpeg;base64,${imageBase64}`;
 
-    // Step 1: Use OpenAI GPT-3.5-turbo with vision capabilities to identify the species
+    // Step 1: Use OpenAI GPT-4o with vision capabilities to identify the species
     console.log("Sending image to OpenAI for species identification");
     const visionResponse = await fetch("https://api.openai.com/v1/chat/completions", {
       method: "POST",
@@ -78,7 +78,7 @@ serve(async (req) => {
         "Authorization": `Bearer ${OPENAI_API_KEY}`
       },
       body: JSON.stringify({
-        model: "gpt-3.5-turbo",
+        model: "gpt-4o",
         messages: [
           {
             role: "system",
@@ -130,8 +130,8 @@ serve(async (req) => {
       speciesIdentification = "Espécie não identificada. Por favor, tente com uma imagem mais clara.";
     }
 
-    // Step 2: Generate detailed description using GPT-3.5-Turbo
-    console.log("Generating detailed description using GPT-3.5-Turbo");
+    // Step 2: Generate detailed description using GPT-4o for better quality description
+    console.log("Generating detailed description using GPT-4o");
     const descriptionResponse = await fetch("https://api.openai.com/v1/chat/completions", {
       method: "POST",
       headers: {
@@ -139,7 +139,7 @@ serve(async (req) => {
         "Content-Type": "application/json"
       },
       body: JSON.stringify({
-        model: "gpt-3.5-turbo",
+        model: "gpt-4o",
         messages: [
           {
             role: "system", 
