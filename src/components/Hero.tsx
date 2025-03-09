@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
-import { ArrowRight, ArrowDown, ChevronDown } from 'lucide-react';
+import { ArrowRight, ArrowDown, ChevronDown, Leaf } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import SearchBar from './SearchBar';
 import { motion } from 'framer-motion';
@@ -152,6 +152,29 @@ const Hero = () => {
             custom={3}
           >
             <SearchBar className="mb-6 sm:mb-8" />
+
+            {/* Botão do Identificador de Espécies */}
+            <motion.div 
+              className="mb-6 flex justify-center"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.4, duration: 0.5 }}
+            >
+              <Button 
+                variant="outline" 
+                size="lg" 
+                className="bg-white/10 backdrop-blur-sm hover:bg-white/20 border-white/30 text-white group relative overflow-hidden"
+                asChild
+              >
+                <Link to="/species-recognition" className="flex items-center gap-2">
+                  <span className="relative z-10 flex items-center gap-2">
+                    <Leaf className="w-5 h-5 text-green-300 group-hover:text-green-200 transition-colors" />
+                    <span>Identificador de Espécies</span>
+                  </span>
+                  <span className="absolute inset-0 bg-gradient-to-r from-green-600/10 to-green-400/10 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+                </Link>
+              </Button>
+            </motion.div>
             
             <div className="flex flex-col sm:flex-row gap-3 justify-center mt-6 sm:mt-8">
               <Button 
