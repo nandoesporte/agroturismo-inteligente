@@ -124,7 +124,7 @@ const SpeciesRecognition = () => {
       // Create an image element
       const img = new Image();
       img.onload = () => {
-        // Calculate target dimensions
+        // Calculate target dimensions - reduce size to improve API performance
         const MAX_WIDTH = 800;
         const MAX_HEIGHT = 800;
         let width = img.width;
@@ -196,14 +196,23 @@ const SpeciesRecognition = () => {
       const processedImage = await preprocessImage(capturedImage);
       console.log("Image prepared for sending, size:", processedImage.length);
       
-      // Create payload with the image data
+      // Verify we have valid image data
+      if (!processedImage || processedImage.length < 100) {
+        throw new Error('Dados de imagem inválidos. Por favor, tente novamente com outra foto.');
+      }
+      
+      // Create payload with the image data, ensuring it's properly formatted
       const payload = {
         image: processedImage
       };
       
+      // Log payload size
+      const payloadString = JSON.stringify(payload);
+      console.log("Payload string length:", payloadString.length);
+      
       // Use the Supabase Edge Function for species recognition
       const { data, error: functionError } = await supabase.functions.invoke('species-recognition', {
-        body: JSON.stringify(payload),
+        body: payloadString,
         headers: {
           'Content-Type': 'application/json',
         },

@@ -24,63 +24,39 @@ serve(async (req) => {
     // Detailed request debugging
     const contentType = req.headers.get("content-type") || "";
     console.log("Content type:", contentType);
-    console.log("Request headers:", Object.fromEntries(req.headers.entries()));
     
     let imageBase64 = "";
+    let requestBody;
     
-    if (contentType.includes("application/json")) {
-      // Handle JSON payload
-      try {
-        const requestText = await req.text();
-        console.log("Request body length:", requestText.length);
-        
-        if (!requestText || requestText.trim() === '') {
-          console.error("Empty request body received");
-          throw new Error("Empty request body");
-        }
-        
-        try {
-          const body = JSON.parse(requestText);
-          console.log("Parsed JSON successfully, image data length:", body.image ? body.image.length : 0);
-          
-          if (!body.image) {
-            console.error("Missing image field in request");
-            throw new Error("No image data provided in the JSON payload");
-          }
-          
-          imageBase64 = body.image.replace(/^data:image\/[a-z]+;base64,/, "");
-          console.log("Base64 image extracted, length:", imageBase64.length);
-        } catch (parseError) {
-          console.error("JSON parsing error:", parseError.message);
-          throw new Error("Invalid JSON format: " + parseError.message);
-        }
-      } catch (jsonError) {
-        console.error("JSON processing error:", jsonError.message);
-        throw new Error("Failed to process JSON data: " + jsonError.message);
+    try {
+      // Read the request body as text first
+      const bodyText = await req.text();
+      console.log("Raw request body length:", bodyText.length);
+      
+      if (!bodyText || bodyText.trim() === '') {
+        throw new Error("Empty request body");
       }
-    } else if (contentType.includes("multipart/form-data")) {
-      // Handle form data
+      
+      // Try to parse as JSON
       try {
-        const formData = await req.formData();
-        const imageFile = formData.get('image');
+        requestBody = JSON.parse(bodyText);
+        console.log("Request body parsed successfully");
         
-        if (!imageFile || !(imageFile instanceof File)) {
-          throw new Error("No valid image file provided in form data");
+        if (!requestBody.image) {
+          throw new Error("No image field in request body");
         }
-
-        // Convert image to base64
-        const imageBytes = await imageFile.arrayBuffer();
-        imageBase64 = btoa(String.fromCharCode(...new Uint8Array(imageBytes)));
-        console.log("FormData image processed, base64 length:", imageBase64.length);
-      } catch (formError) {
-        console.error("Form data processing error:", formError.message);
-        throw new Error("Failed to process form data: " + formError.message);
+        
+        imageBase64 = requestBody.image.replace(/^data:image\/[a-z]+;base64,/, "");
+        console.log("Image base64 extracted, length:", imageBase64.length);
+      } catch (parseError) {
+        console.error("JSON parsing error:", parseError.message);
+        throw new Error("Invalid JSON format: " + parseError.message);
       }
-    } else {
-      console.error("Unsupported content type:", contentType);
-      throw new Error(`Unsupported content type: ${contentType}. Please use application/json or multipart/form-data.`);
+    } catch (bodyError) {
+      console.error("Error processing request body:", bodyError.message);
+      throw new Error("Failed to process request body: " + bodyError.message);
     }
-
+    
     if (!imageBase64 || imageBase64.length < 100) {
       console.error("Invalid or missing image data, length:", imageBase64 ? imageBase64.length : 0);
       throw new Error("Missing or invalid image data");
