@@ -84,6 +84,9 @@ serve(async (req) => {
       
       Responda qualquer interação imediatamente, mesmo que seja apenas "olá", "oi" ou uma saudação simples.
       Não espere pelo usuário fornecer mais informações antes de responder.
+      
+      IMPORTANTE: Mantenha suas respostas curtas e concisas. Não ultrapasse 5-6 frases por resposta para não sobrecarregar o usuário. 
+      Se for necessário dar muitas informações, divida em partes e pergunte se o usuário deseja mais detalhes.
     `;
 
     // Build the messages array with context
