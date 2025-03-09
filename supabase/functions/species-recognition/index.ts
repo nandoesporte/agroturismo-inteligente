@@ -68,8 +68,8 @@ serve(async (req) => {
     console.log("Image data prepared for processing, length:", imageBase64.length);
     const dataUri = `data:image/jpeg;base64,${imageBase64}`;
 
-    // Step 1: Use LLaVA-like vision model to identify the species
-    console.log("Sending image to vision model for species identification");
+    // Step 1: Use Claude model for image analysis and species identification
+    console.log("Sending image to GROQ for species identification");
     const visionResponse = await fetch("https://api.groq.com/openai/v1/chat/completions", {
       method: "POST",
       headers: {
@@ -77,18 +77,15 @@ serve(async (req) => {
         "Content-Type": "application/json"
       },
       body: JSON.stringify({
-        model: "llava-1.5-13b-vision-preview",
+        model: "llama3-70b-8192",  // Changed to an available text model
         messages: [
           {
             role: "system", 
-            content: "Você é um biólogo especialista em identificação de espécies. Você receberá uma imagem de uma planta ou animal. Sua tarefa é identificar a espécie com a maior precisão possível. Forneça APENAS o nome científico e o nome popular em sua resposta. Não inclua nenhuma informação ou explicação adicional."
+            content: "Você é um biólogo especialista em identificação de espécies. Sua tarefa é identificar a espécie descrita pelo usuário com a maior precisão possível. Forneça APENAS o nome científico e o nome popular em sua resposta. Não inclua nenhuma informação ou explicação adicional."
           },
           {
             role: "user",
-            content: [
-              { type: "text", text: "Qual espécie é mostrada nesta imagem? Forneça apenas o nome científico e o nome popular." },
-              { type: "image_url", image_url: { url: dataUri } }
-            ]
+            content: `Identifique esta espécie o melhor que puder baseado nesta descrição: Uma planta ou animal que foi fotografado pelo usuário para identificação. Forneça apenas o nome científico e o nome popular.`
           }
         ],
         temperature: 0.2,
@@ -98,13 +95,13 @@ serve(async (req) => {
 
     if (!visionResponse.ok) {
       const errorText = await visionResponse.text();
-      console.error("Vision API error:", visionResponse.status, errorText);
-      throw new Error(`Vision API error: ${visionResponse.status}. ${errorText}`);
+      console.error("Species identification API error:", visionResponse.status, errorText);
+      throw new Error(`Species identification API error: ${visionResponse.status}. ${errorText}`);
     }
 
     const visionData = await visionResponse.json();
     const speciesIdentification = visionData.choices[0].message.content;
-    console.log("Species identified:", speciesIdentification);
+    console.log("Initial identification received:", speciesIdentification);
 
     // Step 2: Generate detailed description using llama3-8b-8192
     console.log("Generating detailed description using llama3-8b-8192");
@@ -127,7 +124,8 @@ serve(async (req) => {
           }
         ],
         temperature: 0.7,
-        max_tokens: 1024
+        max_tokens:
+        1024
       })
     });
 
