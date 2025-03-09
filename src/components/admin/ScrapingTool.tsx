@@ -60,6 +60,10 @@ export const ScrapingTool: React.FC<ScrapingToolProps> = ({ onImportProperty }) 
   const [selectedProperties, setSelectedProperties] = useState<Record<number, boolean>>({});
   const [activeTab, setActiveTab] = useState("predefined");
   const [selectedCategory, setSelectedCategory] = useState("Todos");
+  const [selectAll, setSelectAll] = useState(false);
+  const [bulkImportInProgress, setBulkImportInProgress] = useState(false);
+  const [urlsToScrape, setUrlsToScrape] = useState<string[]>([]);
+  const [currentUrlIndex, setCurrentUrlIndex] = useState(0);
 
   const handleUrlSelect = (url: string) => {
     setSelectedUrl(url);
@@ -120,6 +124,28 @@ export const ScrapingTool: React.FC<ScrapingToolProps> = ({ onImportProperty }) 
       ...prev,
       [index]: !prev[index]
     }));
+
+    // Update selectAll state if all properties are selected or not
+    const updatedSelections = { ...selectedProperties, [index]: !selectedProperties[index] };
+    const allSelected = filteredProperties.every((_, i) => {
+      const originalIndex = scrapedProperties.findIndex(p => p === filteredProperties[i]);
+      return updatedSelections[originalIndex];
+    });
+    
+    setSelectAll(allSelected);
+  };
+
+  const handleSelectAll = (checked: boolean) => {
+    setSelectAll(checked);
+    
+    const newSelectedProperties = { ...selectedProperties };
+    
+    filteredProperties.forEach((property, _) => {
+      const originalIndex = scrapedProperties.findIndex(p => p === property);
+      newSelectedProperties[originalIndex] = checked;
+    });
+    
+    setSelectedProperties(newSelectedProperties);
   };
 
   const handleImportSelected = () => {
@@ -166,6 +192,72 @@ export const ScrapingTool: React.FC<ScrapingToolProps> = ({ onImportProperty }) 
     
     // Reset selections
     setSelectedProperties({});
+    setSelectAll(false);
+  };
+
+  const handleBulkScrape = async () => {
+    // Extract URLs from all predefined URLs
+    const urls = predefinedUrls.map(item => item.url);
+    setUrlsToScrape(urls);
+    setCurrentUrlIndex(0);
+    setBulkImportInProgress(true);
+    setScrapedProperties([]);
+    setSelectedProperties({});
+    
+    // Start with the first URL
+    await processBulkScrape(urls, 0);
+  };
+
+  const processBulkScrape = async (urls: string[], index: number) => {
+    if (index >= urls.length) {
+      // All URLs processed
+      setBulkImportInProgress(false);
+      toast({
+        title: "Processo em lote concluído",
+        description: `Extração de ${urls.length} sites finalizada`,
+      });
+      return;
+    }
+
+    setCurrentUrlIndex(index);
+    
+    const urlToScrape = urls[index];
+    toast({
+      title: `Processando site ${index + 1} de ${urls.length}`,
+      description: `Extraindo dados de: ${predefinedUrls.find(item => item.url === urlToScrape)?.name || urlToScrape}`,
+    });
+
+    try {
+      setIsLoading(true);
+      setProgress(20);
+      
+      const result = await FirecrawlService.scrapeWebsite(urlToScrape);
+      
+      if (result.success && result.properties && result.properties.length > 0) {
+        // Append new properties to existing ones
+        setScrapedProperties(prev => [...prev, ...result.properties]);
+        
+        toast({
+          title: "Site processado com sucesso",
+          description: `Encontradas ${result.properties.length} propriedades`,
+        });
+      }
+    } catch (error: any) {
+      console.error(`Erro ao processar ${urlToScrape}:`, error);
+      toast({
+        title: "Erro em um dos sites",
+        description: `Problema ao processar: ${predefinedUrls.find(item => item.url === urlToScrape)?.name}`,
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
+      setProgress(100);
+      
+      // Process next URL after a short delay
+      setTimeout(() => {
+        processBulkScrape(urls, index + 1);
+      }, 1000);
+    }
   };
 
   // Filter properties by selected category
@@ -204,19 +296,35 @@ export const ScrapingTool: React.FC<ScrapingToolProps> = ({ onImportProperty }) 
               ))}
             </div>
             
-            <Button
-              onClick={() => handleScrape(selectedUrl)}
-              disabled={isLoading}
-              className="w-full bg-nature-600 hover:bg-nature-700"
-            >
-              {isLoading ? (
-                "Analisando com IA..."
-              ) : (
-                <>
-                  <Sparkles className="h-4 w-4 mr-2" /> Extrair Dados com IA
-                </>
-              )}
-            </Button>
+            <div className="flex flex-col sm:flex-row gap-2">
+              <Button
+                onClick={() => handleScrape(selectedUrl)}
+                disabled={isLoading || bulkImportInProgress}
+                className="flex-1 bg-nature-600 hover:bg-nature-700"
+              >
+                {isLoading ? (
+                  "Analisando com IA..."
+                ) : (
+                  <>
+                    <Sparkles className="h-4 w-4 mr-2" /> Extrair Dados com IA
+                  </>
+                )}
+              </Button>
+              
+              <Button
+                onClick={handleBulkScrape}
+                disabled={isLoading || bulkImportInProgress}
+                className="flex-1 bg-amber-600 hover:bg-amber-700"
+              >
+                {bulkImportInProgress ? (
+                  `Processando ${currentUrlIndex + 1}/${urlsToScrape.length}...`
+                ) : (
+                  <>
+                    <Sparkles className="h-4 w-4 mr-2" /> Extrair Todos os Sites
+                  </>
+                )}
+              </Button>
+            </div>
           </TabsContent>
           
           <TabsContent value="custom" className="space-y-4">
@@ -238,7 +346,7 @@ export const ScrapingTool: React.FC<ScrapingToolProps> = ({ onImportProperty }) 
             
             <Button
               onClick={() => handleScrape(customUrl)}
-              disabled={isLoading || !customUrl}
+              disabled={isLoading || bulkImportInProgress || !customUrl}
               className="w-full bg-nature-600 hover:bg-nature-700"
             >
               {isLoading ? (
@@ -252,7 +360,7 @@ export const ScrapingTool: React.FC<ScrapingToolProps> = ({ onImportProperty }) 
           </TabsContent>
         </Tabs>
 
-        {isLoading && (
+        {(isLoading || bulkImportInProgress) && (
           <Progress value={progress} className="w-full mt-4" />
         )}
 
@@ -288,152 +396,167 @@ export const ScrapingTool: React.FC<ScrapingToolProps> = ({ onImportProperty }) 
               </div>
             </div>
             
-            <div className="border rounded-md divide-y">
-              {filteredProperties.map((property, index) => {
-                const originalIndex = scrapedProperties.findIndex(p => p === property);
-                return (
-                  <div key={originalIndex} className="p-3 flex items-start space-x-3">
-                    <Checkbox
-                      id={`property-${originalIndex}`}
-                      checked={selectedProperties[originalIndex] || false}
-                      onCheckedChange={() => togglePropertySelection(originalIndex)}
-                      className="mt-1"
-                    />
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-start justify-between">
-                        <div>
-                          <p className="font-medium truncate">{property.name || "Propriedade sem nome"}</p>
-                          <div className="flex items-center gap-2">
-                            <p className="text-sm text-muted-foreground truncate">
-                              {property.location || "Localização não especificada"}
-                            </p>
-                            {property.type && (
-                              <span className="inline-block px-2 py-0.5 bg-amber-100 text-amber-800 rounded-full text-xs">
-                                {property.type}
-                              </span>
-                            )}
-                          </div>
-                        </div>
-                        {property.price && (
-                          <span className="text-sm font-medium px-2 py-1 bg-green-100 text-green-800 rounded">
-                            {property.price}
-                          </span>
-                        )}
-                      </div>
-                      
-                      {/* Activities */}
-                      {property.activities && property.activities.length > 0 && (
-                        <div className="mt-2">
-                          <p className="text-xs font-medium text-muted-foreground mb-1">Atividades:</p>
-                          <div className="flex flex-wrap gap-1">
-                            {property.activities.map((activity, actIdx) => (
-                              <span 
-                                key={actIdx} 
-                                className="inline-block px-2 py-1 bg-nature-50 text-nature-700 rounded-full text-xs"
-                              >
-                                {activity}
-                              </span>
-                            ))}
-                          </div>
-                        </div>
-                      )}
-                      
-                      {/* Amenities */}
-                      {property.amenities && property.amenities.length > 0 && (
-                        <div className="mt-2">
-                          <p className="text-xs font-medium text-muted-foreground mb-1">Comodidades:</p>
-                          <div className="flex flex-wrap gap-1">
-                            {property.amenities.map((amenity, amenIdx) => (
-                              <span 
-                                key={amenIdx} 
-                                className="inline-block px-2 py-1 bg-blue-50 text-blue-700 rounded-full text-xs"
-                              >
-                                {amenity}
-                              </span>
-                            ))}
-                          </div>
-                        </div>
-                      )}
-                      
-                      {/* Hours */}
-                      {property.hours && (
-                        <div className="mt-2 flex items-center gap-1 text-xs">
-                          <Clock size={12} className="text-muted-foreground" />
-                          <span className="text-muted-foreground">{property.hours}</span>
-                        </div>
-                      )}
-                      
-                      {/* Contact Information */}
-                      <div className="mt-2 flex items-center flex-wrap gap-3 text-xs text-muted-foreground">
-                        {property.image && (
-                          <TooltipProvider>
-                            <Tooltip>
-                              <TooltipTrigger asChild>
-                                <span className="flex items-center gap-1 text-blue-600">
-                                  <Info size={12} /> Imagem disponível
+            <div className="border rounded-md">
+              {/* Select all header */}
+              <div className="p-3 bg-muted/20 border-b flex items-center">
+                <Checkbox
+                  id="select-all"
+                  checked={selectAll}
+                  onCheckedChange={handleSelectAll}
+                  className="mr-3"
+                />
+                <Label htmlFor="select-all" className="flex-1 cursor-pointer font-medium">
+                  Selecionar todas as propriedades ({filteredProperties.length})
+                </Label>
+              </div>
+              
+              <div className="divide-y">
+                {filteredProperties.map((property, index) => {
+                  const originalIndex = scrapedProperties.findIndex(p => p === property);
+                  return (
+                    <div key={originalIndex} className="p-3 flex items-start space-x-3">
+                      <Checkbox
+                        id={`property-${originalIndex}`}
+                        checked={selectedProperties[originalIndex] || false}
+                        onCheckedChange={() => togglePropertySelection(originalIndex)}
+                        className="mt-1"
+                      />
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-start justify-between">
+                          <div>
+                            <p className="font-medium truncate">{property.name || "Propriedade sem nome"}</p>
+                            <div className="flex items-center gap-2">
+                              <p className="text-sm text-muted-foreground truncate">
+                                {property.location || "Localização não especificada"}
+                              </p>
+                              {property.type && (
+                                <span className="inline-block px-2 py-0.5 bg-amber-100 text-amber-800 rounded-full text-xs">
+                                  {property.type}
                                 </span>
-                              </TooltipTrigger>
-                              <TooltipContent>
-                                <p>Imagem disponível para esta propriedade</p>
-                              </TooltipContent>
-                            </Tooltip>
-                          </TooltipProvider>
-                        )}
+                              )}
+                            </div>
+                          </div>
+                          {property.price && (
+                            <span className="text-sm font-medium px-2 py-1 bg-green-100 text-green-800 rounded">
+                              {property.price}
+                            </span>
+                          )}
+                        </div>
                         
-                        {property.contact?.phone && (
-                          <TooltipProvider>
-                            <Tooltip>
-                              <TooltipTrigger asChild>
-                                <span className="flex items-center gap-1">
-                                  <Phone size={12} /> {property.contact.phone}
-                                </span>
-                              </TooltipTrigger>
-                              <TooltipContent>
-                                <p>Telefone de contato</p>
-                              </TooltipContent>
-                            </Tooltip>
-                          </TooltipProvider>
-                        )}
-                        
-                        {property.contact?.email && (
-                          <TooltipProvider>
-                            <Tooltip>
-                              <TooltipTrigger asChild>
-                                <span className="flex items-center gap-1">
-                                  <Mail size={12} /> {property.contact.email}
-                                </span>
-                              </TooltipTrigger>
-                              <TooltipContent>
-                                <p>Email de contato</p>
-                              </TooltipContent>
-                            </Tooltip>
-                          </TooltipProvider>
-                        )}
-                        
-                        {property.contact?.website && (
-                          <TooltipProvider>
-                            <Tooltip>
-                              <TooltipTrigger asChild>
-                                <a 
-                                  href={property.contact.website} 
-                                  target="_blank" 
-                                  rel="noopener noreferrer"
-                                  className="flex items-center gap-1 text-blue-500 hover:underline"
+                        {/* Activities */}
+                        {property.activities && property.activities.length > 0 && (
+                          <div className="mt-2">
+                            <p className="text-xs font-medium text-muted-foreground mb-1">Atividades:</p>
+                            <div className="flex flex-wrap gap-1">
+                              {property.activities.map((activity, actIdx) => (
+                                <span 
+                                  key={actIdx} 
+                                  className="inline-block px-2 py-1 bg-nature-50 text-nature-700 rounded-full text-xs"
                                 >
-                                  <ExternalLink size={12} /> Ver site
-                                </a>
-                              </TooltipTrigger>
-                              <TooltipContent>
-                                <p>Abrir página no site</p>
-                              </TooltipContent>
-                            </Tooltip>
-                          </TooltipProvider>
+                                  {activity}
+                                </span>
+                              ))}
+                            </div>
+                          </div>
                         )}
+                        
+                        {/* Amenities */}
+                        {property.amenities && property.amenities.length > 0 && (
+                          <div className="mt-2">
+                            <p className="text-xs font-medium text-muted-foreground mb-1">Comodidades:</p>
+                            <div className="flex flex-wrap gap-1">
+                              {property.amenities.map((amenity, amenIdx) => (
+                                <span 
+                                  key={amenIdx} 
+                                  className="inline-block px-2 py-1 bg-blue-50 text-blue-700 rounded-full text-xs"
+                                >
+                                  {amenity}
+                                </span>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                        
+                        {/* Hours */}
+                        {property.hours && (
+                          <div className="mt-2 flex items-center gap-1 text-xs">
+                            <Clock size={12} className="text-muted-foreground" />
+                            <span className="text-muted-foreground">{property.hours}</span>
+                          </div>
+                        )}
+                        
+                        {/* Contact Information */}
+                        <div className="mt-2 flex items-center flex-wrap gap-3 text-xs text-muted-foreground">
+                          {property.image && (
+                            <TooltipProvider>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <span className="flex items-center gap-1 text-blue-600">
+                                    <Info size={12} /> Imagem disponível
+                                  </span>
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                  <p>Imagem disponível para esta propriedade</p>
+                                </TooltipContent>
+                              </Tooltip>
+                            </TooltipProvider>
+                          )}
+                          
+                          {property.contact?.phone && (
+                            <TooltipProvider>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <span className="flex items-center gap-1">
+                                    <Phone size={12} /> {property.contact.phone}
+                                  </span>
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                  <p>Telefone de contato</p>
+                                </TooltipContent>
+                              </Tooltip>
+                            </TooltipProvider>
+                          )}
+                          
+                          {property.contact?.email && (
+                            <TooltipProvider>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <span className="flex items-center gap-1">
+                                    <Mail size={12} /> {property.contact.email}
+                                  </span>
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                  <p>Email de contato</p>
+                                </TooltipContent>
+                              </Tooltip>
+                            </TooltipProvider>
+                          )}
+                          
+                          {property.contact?.website && (
+                            <TooltipProvider>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <a 
+                                    href={property.contact.website} 
+                                    target="_blank" 
+                                    rel="noopener noreferrer"
+                                    className="flex items-center gap-1 text-blue-500 hover:underline"
+                                  >
+                                    <ExternalLink size={12} /> Ver site
+                                  </a>
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                  <p>Abrir página no site</p>
+                                </TooltipContent>
+                              </Tooltip>
+                            </TooltipProvider>
+                          )}
+                        </div>
                       </div>
                     </div>
-                  </div>
-                );
-              })}
+                  );
+                })}
+              </div>
             </div>
           </div>
         )}
@@ -444,6 +567,7 @@ export const ScrapingTool: React.FC<ScrapingToolProps> = ({ onImportProperty }) 
           onClick={() => {
             setScrapedProperties([]);
             setSelectedProperties({});
+            setSelectAll(false);
           }}
           disabled={scrapedProperties.length === 0}
         >
