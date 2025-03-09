@@ -5,16 +5,14 @@ import { cn } from '@/lib/utils';
 import { supabase } from '@/lib/supabase';
 import { useToast } from '@/hooks/use-toast';
 import { Textarea } from "@/components/ui/textarea";
-import Typewriter from "@/components/Typewriter";
 
 interface Message {
   id: string;
   text: string;
   sender: 'user' | 'bot';
   timestamp: Date;
-  role?: 'user' | 'assistant'; // Para API context
-  content?: string; // Para API context
-  isTyping?: boolean;
+  role?: 'user' | 'assistant'; // For API context
+  content?: string; // For API context
 }
 
 interface ChatbotProps {
@@ -44,7 +42,6 @@ const Chatbot = ({ isMobile = false }: ChatbotProps) => {
   const [messages, setMessages] = useState<Message[]>(initialMessages);
   const [inputValue, setInputValue] = useState('');
   const [isTyping, setIsTyping] = useState(false);
-  const [visibleText, setVisibleText] = useState('');
   const [isExpanded, setIsExpanded] = useState(true);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
@@ -118,28 +115,13 @@ const Chatbot = ({ isMobile = false }: ChatbotProps) => {
     setInputValue('');
     setIsTyping(true);
     
-    // Add a temporary bot message with typing animation
-    const tempBotId = (Date.now() + 1).toString();
-    const tempBotMessage: Message = {
-      id: tempBotId,
-      text: "",
-      sender: 'bot',
-      timestamp: new Date(),
-      isTyping: true
-    };
-    
-    setMessages(prev => [...prev, tempBotMessage]);
-    
     try {
       // Get response from our assistant
       const result = await callAgroAssistant(inputValue);
       
-      // Remove the temporary typing message
-      setMessages(prev => prev.filter(msg => msg.id !== tempBotId));
-      
-      // Add bot response with typing effect
+      // Add bot response
       const botResponse: Message = {
-        id: (Date.now() + 2).toString(),
+        id: (Date.now() + 1).toString(),
         text: result.response,
         sender: 'bot',
         timestamp: new Date(),
@@ -151,12 +133,9 @@ const Chatbot = ({ isMobile = false }: ChatbotProps) => {
     } catch (error) {
       console.error('Error getting response:', error);
       
-      // Remove the temporary typing message
-      setMessages(prev => prev.filter(msg => msg.id !== tempBotId));
-      
       // Add fallback response in case of error
       const errorResponse: Message = {
-        id: (Date.now() + 2).toString(),
+        id: (Date.now() + 1).toString(),
         text: "Desculpe, estou enfrentando dificuldades técnicas no momento. Por favor, tente novamente mais tarde.",
         sender: 'bot',
         timestamp: new Date(),
@@ -191,18 +170,15 @@ const Chatbot = ({ isMobile = false }: ChatbotProps) => {
   return (
     <div className={cn("flex flex-col", isMobile ? "h-[450px]" : "h-[500px]")}>
       {/* Header */}
-      <div className="px-4 py-3 border-b border-border bg-gradient-to-r from-nature-600 to-nature-700 text-white flex justify-between items-center">
+      <div className="px-4 py-3 border-b border-border bg-muted flex justify-between items-center">
         <div>
-          <h3 className="font-medium flex items-center">
-            <Bot className="h-4 w-4 mr-2" />
-            Assistente AgroParaná
-          </h3>
-          <p className="text-xs text-nature-100">Tire suas dúvidas sobre o agroturismo</p>
+          <h3 className="font-medium">Assistente AgroParaná</h3>
+          <p className="text-xs text-muted-foreground">Tire suas dúvidas sobre o agroturismo</p>
         </div>
         {isMobile && (
           <button 
             onClick={toggleExpand} 
-            className="text-white hover:text-nature-100"
+            className="text-muted-foreground hover:text-foreground"
             aria-label={isExpanded ? "Minimizar chat" : "Expandir chat"}
           >
             <ChevronDown className={cn("h-5 w-5 transition-transform", !isExpanded && "rotate-180")} />
@@ -214,7 +190,7 @@ const Chatbot = ({ isMobile = false }: ChatbotProps) => {
       {(isExpanded || !isMobile) && (
         <div className={cn(
           "flex-1 overflow-y-auto p-3 md:p-4 space-y-3 md:space-y-4", 
-          isMobile ? "bg-nature-50/30" : "bg-white"
+          isMobile ? "bg-muted/30" : ""
         )}>
           {messages.map(message => (
             <div 
@@ -226,16 +202,16 @@ const Chatbot = ({ isMobile = false }: ChatbotProps) => {
             >
               <div 
                 className={cn(
-                  "max-w-[85%] md:max-w-[80%] rounded-xl p-3 md:p-3 shadow-sm",
+                  "max-w-[85%] md:max-w-[80%] rounded-xl p-2 md:p-3 shadow-sm",
                   message.sender === 'user' 
                     ? "bg-nature-600 text-white rounded-tr-none"
-                    : "bg-white border border-nature-100 rounded-tl-none"
+                    : "bg-white md:bg-muted rounded-tl-none"
                 )}
               >
                 <div className="flex items-center space-x-2 mb-1">
                   <div 
                     className={cn(
-                      "w-6 h-6 rounded-full flex items-center justify-center",
+                      "w-5 h-5 rounded-full flex items-center justify-center",
                       message.sender === 'user' ? "bg-white/20" : "bg-nature-100"
                     )}
                   >
@@ -249,19 +225,7 @@ const Chatbot = ({ isMobile = false }: ChatbotProps) => {
                     {message.sender === 'user' ? 'Você' : 'Assistente'}
                   </span>
                 </div>
-                
-                {message.isTyping ? (
-                  <div className="flex items-center space-x-1 py-2">
-                    <div className="w-2 h-2 rounded-full bg-nature-400 animate-pulse"></div>
-                    <div className="w-2 h-2 rounded-full bg-nature-400 animate-pulse delay-100"></div>
-                    <div className="w-2 h-2 rounded-full bg-nature-400 animate-pulse delay-200"></div>
-                  </div>
-                ) : message.sender === 'bot' ? (
-                  <Typewriter text={message.text} speed={20} />
-                ) : (
-                  <p className="text-sm whitespace-pre-wrap break-words">{message.text}</p>
-                )}
-                
+                <p className="text-sm whitespace-pre-wrap break-words">{message.text}</p>
                 <div className="text-right mt-1">
                   <span className="text-xs opacity-70">
                     {`${message.timestamp.getHours().toString().padStart(2, '0')}:${message.timestamp.getMinutes().toString().padStart(2, '0')}`}
@@ -271,19 +235,29 @@ const Chatbot = ({ isMobile = false }: ChatbotProps) => {
             </div>
           ))}
           
+          {isTyping && (
+            <div className="flex justify-start">
+              <div className="bg-white md:bg-muted rounded-xl rounded-tl-none p-3 flex items-center space-x-2 shadow-sm">
+                <div className="w-2 h-2 rounded-full bg-nature-400 animate-pulse"></div>
+                <div className="w-2 h-2 rounded-full bg-nature-400 animate-pulse delay-100"></div>
+                <div className="w-2 h-2 rounded-full bg-nature-400 animate-pulse delay-200"></div>
+              </div>
+            </div>
+          )}
+          
           <div ref={messagesEndRef} />
         </div>
       )}
       
       {/* Suggested questions */}
       {(isExpanded || !isMobile) && messages.length <= 2 && (
-        <div className="p-2 md:p-3 border-t border-border bg-white">
-          <p className="text-xs text-nature-600 font-medium mb-1 md:mb-2">Perguntas sugeridas:</p>
+        <div className="p-2 md:p-3 border-t border-border bg-background">
+          <p className="text-xs text-muted-foreground mb-1 md:mb-2">Perguntas sugeridas:</p>
           <div className="flex flex-wrap gap-2">
             {suggestedQuestions.map((question, index) => (
               <button
                 key={index}
-                className="text-xs px-2 py-1 md:px-3 md:py-1.5 border border-nature-200 bg-nature-50 rounded-full hover:bg-nature-100 transition-colors"
+                className="text-xs px-2 py-1 md:px-3 md:py-1.5 border border-border rounded-full hover:bg-muted trans"
                 onClick={() => handleSuggestedQuestion(question)}
               >
                 {question}
@@ -295,12 +269,12 @@ const Chatbot = ({ isMobile = false }: ChatbotProps) => {
       
       {/* Input */}
       <div className={cn(
-        "p-2 md:p-3 border-t border-border bg-white", 
+        "p-2 md:p-3 border-t border-border bg-background", 
         (!isExpanded && isMobile) && "border-t-0"
       )}>
         <div className="flex items-center space-x-2">
           <Textarea
-            className="min-h-[40px] max-h-[100px] md:max-h-[120px] p-2 bg-muted border border-nature-200 rounded-md text-sm resize-none focus-visible:ring-1 focus-visible:ring-nature-500 focus-visible:ring-offset-0"
+            className="min-h-[40px] max-h-[100px] md:max-h-[120px] p-2 bg-muted border border-border rounded-md text-sm resize-none focus-visible:ring-1 focus-visible:ring-nature-500 focus-visible:ring-offset-0"
             placeholder="Digite sua mensagem..."
             value={inputValue}
             onChange={(e) => setInputValue(e.target.value)}
