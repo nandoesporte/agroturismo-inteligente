@@ -1,9 +1,10 @@
 
 import React, { useState, useEffect, useRef } from 'react';
-import { Send, User, Bot } from 'lucide-react';
+import { Send, User, Bot, X, ChevronDown } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { supabase } from '@/lib/supabase';
 import { useToast } from '@/hooks/use-toast';
+import { Textarea } from "@/components/ui/textarea";
 
 interface Message {
   id: string;
@@ -12,6 +13,10 @@ interface Message {
   timestamp: Date;
   role?: 'user' | 'assistant'; // For API context
   content?: string; // For API context
+}
+
+interface ChatbotProps {
+  isMobile?: boolean;
 }
 
 const initialMessages: Message[] = [
@@ -33,10 +38,11 @@ const suggestedQuestions = [
   'Quais cafés coloniais você recomenda?'
 ];
 
-const Chatbot = () => {
+const Chatbot = ({ isMobile = false }: ChatbotProps) => {
   const [messages, setMessages] = useState<Message[]>(initialMessages);
   const [inputValue, setInputValue] = useState('');
   const [isTyping, setIsTyping] = useState(false);
+  const [isExpanded, setIsExpanded] = useState(true);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
 
@@ -156,82 +162,102 @@ const Chatbot = () => {
       handleSend();
     }, 100);
   };
+
+  const toggleExpand = () => {
+    setIsExpanded(!isExpanded);
+  };
   
   return (
-    <div className="flex flex-col h-[500px]">
+    <div className={cn("flex flex-col", isMobile ? "h-[450px]" : "h-[500px]")}>
       {/* Header */}
-      <div className="px-4 py-3 border-b border-border bg-muted">
-        <h3 className="font-medium">Assistente AgroParaná</h3>
-        <p className="text-xs text-muted-foreground">Tire suas dúvidas sobre o agroturismo</p>
+      <div className="px-4 py-3 border-b border-border bg-muted flex justify-between items-center">
+        <div>
+          <h3 className="font-medium">Assistente AgroParaná</h3>
+          <p className="text-xs text-muted-foreground">Tire suas dúvidas sobre o agroturismo</p>
+        </div>
+        {isMobile && (
+          <button 
+            onClick={toggleExpand} 
+            className="text-muted-foreground hover:text-foreground"
+            aria-label={isExpanded ? "Minimizar chat" : "Expandir chat"}
+          >
+            <ChevronDown className={cn("h-5 w-5 transition-transform", !isExpanded && "rotate-180")} />
+          </button>
+        )}
       </div>
       
       {/* Messages */}
-      <div className="flex-1 overflow-y-auto p-4 space-y-4">
-        {messages.map(message => (
-          <div 
-            key={message.id}
-            className={cn(
-              "flex",
-              message.sender === 'user' ? "justify-end" : "justify-start"
-            )}
-          >
+      {(isExpanded || !isMobile) && (
+        <div className={cn(
+          "flex-1 overflow-y-auto p-3 md:p-4 space-y-3 md:space-y-4", 
+          isMobile ? "bg-muted/30" : ""
+        )}>
+          {messages.map(message => (
             <div 
+              key={message.id}
               className={cn(
-                "max-w-[80%] rounded-xl p-3",
-                message.sender === 'user' 
-                  ? "bg-nature-600 text-white rounded-tr-none"
-                  : "bg-muted rounded-tl-none"
+                "flex",
+                message.sender === 'user' ? "justify-end" : "justify-start"
               )}
             >
-              <div className="flex items-center space-x-2 mb-1">
-                <div 
-                  className={cn(
-                    "w-5 h-5 rounded-full flex items-center justify-center",
-                    message.sender === 'user' ? "bg-white/20" : "bg-nature-100"
-                  )}
-                >
-                  {message.sender === 'user' ? (
-                    <User className="w-3 h-3 text-white" />
-                  ) : (
-                    <Bot className="w-3 h-3 text-nature-600" />
-                  )}
+              <div 
+                className={cn(
+                  "max-w-[85%] md:max-w-[80%] rounded-xl p-2 md:p-3 shadow-sm",
+                  message.sender === 'user' 
+                    ? "bg-nature-600 text-white rounded-tr-none"
+                    : "bg-white md:bg-muted rounded-tl-none"
+                )}
+              >
+                <div className="flex items-center space-x-2 mb-1">
+                  <div 
+                    className={cn(
+                      "w-5 h-5 rounded-full flex items-center justify-center",
+                      message.sender === 'user' ? "bg-white/20" : "bg-nature-100"
+                    )}
+                  >
+                    {message.sender === 'user' ? (
+                      <User className="w-3 h-3 text-white" />
+                    ) : (
+                      <Bot className="w-3 h-3 text-nature-600" />
+                    )}
+                  </div>
+                  <span className="text-xs font-medium">
+                    {message.sender === 'user' ? 'Você' : 'Assistente'}
+                  </span>
                 </div>
-                <span className="text-xs font-medium">
-                  {message.sender === 'user' ? 'Você' : 'Assistente'}
-                </span>
-              </div>
-              <p className="text-sm whitespace-pre-wrap">{message.text}</p>
-              <div className="text-right mt-1">
-                <span className="text-xs opacity-70">
-                  {`${message.timestamp.getHours().toString().padStart(2, '0')}:${message.timestamp.getMinutes().toString().padStart(2, '0')}`}
-                </span>
+                <p className="text-sm whitespace-pre-wrap break-words">{message.text}</p>
+                <div className="text-right mt-1">
+                  <span className="text-xs opacity-70">
+                    {`${message.timestamp.getHours().toString().padStart(2, '0')}:${message.timestamp.getMinutes().toString().padStart(2, '0')}`}
+                  </span>
+                </div>
               </div>
             </div>
-          </div>
-        ))}
-        
-        {isTyping && (
-          <div className="flex justify-start">
-            <div className="bg-muted rounded-xl rounded-tl-none p-3 flex items-center space-x-2">
-              <div className="w-2 h-2 rounded-full bg-nature-400 animate-pulse"></div>
-              <div className="w-2 h-2 rounded-full bg-nature-400 animate-pulse delay-100"></div>
-              <div className="w-2 h-2 rounded-full bg-nature-400 animate-pulse delay-200"></div>
+          ))}
+          
+          {isTyping && (
+            <div className="flex justify-start">
+              <div className="bg-white md:bg-muted rounded-xl rounded-tl-none p-3 flex items-center space-x-2 shadow-sm">
+                <div className="w-2 h-2 rounded-full bg-nature-400 animate-pulse"></div>
+                <div className="w-2 h-2 rounded-full bg-nature-400 animate-pulse delay-100"></div>
+                <div className="w-2 h-2 rounded-full bg-nature-400 animate-pulse delay-200"></div>
+              </div>
             </div>
-          </div>
-        )}
-        
-        <div ref={messagesEndRef} />
-      </div>
+          )}
+          
+          <div ref={messagesEndRef} />
+        </div>
+      )}
       
       {/* Suggested questions */}
-      {messages.length <= 2 && (
-        <div className="p-3 border-t border-border">
-          <p className="text-xs text-muted-foreground mb-2">Perguntas sugeridas:</p>
+      {(isExpanded || !isMobile) && messages.length <= 2 && (
+        <div className="p-2 md:p-3 border-t border-border bg-background">
+          <p className="text-xs text-muted-foreground mb-1 md:mb-2">Perguntas sugeridas:</p>
           <div className="flex flex-wrap gap-2">
             {suggestedQuestions.map((question, index) => (
               <button
                 key={index}
-                className="text-xs px-3 py-1.5 border border-border rounded-full hover:bg-muted trans"
+                className="text-xs px-2 py-1 md:px-3 md:py-1.5 border border-border rounded-full hover:bg-muted trans"
                 onClick={() => handleSuggestedQuestion(question)}
               >
                 {question}
@@ -242,19 +268,17 @@ const Chatbot = () => {
       )}
       
       {/* Input */}
-      <div className="p-3 border-t border-border">
+      <div className={cn(
+        "p-2 md:p-3 border-t border-border bg-background", 
+        (!isExpanded && isMobile) && "border-t-0"
+      )}>
         <div className="flex items-center space-x-2">
-          <textarea
-            className="flex-1 min-h-[40px] max-h-[120px] p-2 bg-muted border border-border rounded-md text-sm resize-none focus:outline-none focus:ring-1 focus:ring-nature-500"
+          <Textarea
+            className="min-h-[40px] max-h-[100px] md:max-h-[120px] p-2 bg-muted border border-border rounded-md text-sm resize-none focus-visible:ring-1 focus-visible:ring-nature-500 focus-visible:ring-offset-0"
             placeholder="Digite sua mensagem..."
             value={inputValue}
             onChange={(e) => setInputValue(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter' && !e.shiftKey) {
-                e.preventDefault();
-                handleSend();
-              }
-            }}
+            onKeyDown={handleKeyDown}
             rows={1}
           />
           <button
