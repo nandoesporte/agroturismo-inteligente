@@ -21,18 +21,17 @@ serve(async (req) => {
 
     console.log("Request received for species recognition");
     
-    // Logging request headers to debug content type issues
+    // Detailed request debugging
+    const contentType = req.headers.get("content-type") || "";
+    console.log("Content type:", contentType);
     console.log("Request headers:", Object.fromEntries(req.headers.entries()));
     
     let imageBase64 = "";
-    const contentType = req.headers.get("content-type") || "";
-    console.log("Content type:", contentType);
     
     if (contentType.includes("application/json")) {
+      // Handle JSON payload
       try {
-        // Clone the request to read it multiple times if needed
-        const clonedReq = req.clone();
-        const requestText = await clonedReq.text();
+        const requestText = await req.text();
         console.log("Request body length:", requestText.length);
         
         if (!requestText || requestText.trim() === '') {
@@ -42,14 +41,13 @@ serve(async (req) => {
         
         try {
           const body = JSON.parse(requestText);
-          console.log("Parsed JSON successfully");
+          console.log("Parsed JSON successfully, image data length:", body.image ? body.image.length : 0);
           
           if (!body.image) {
             console.error("Missing image field in request");
             throw new Error("No image data provided in the JSON payload");
           }
           
-          console.log("Image data received, length:", body.image.length);
           imageBase64 = body.image.replace(/^data:image\/[a-z]+;base64,/, "");
           console.log("Base64 image extracted, length:", imageBase64.length);
         } catch (parseError) {
@@ -57,10 +55,11 @@ serve(async (req) => {
           throw new Error("Invalid JSON format: " + parseError.message);
         }
       } catch (jsonError) {
-        console.error("JSON processing error:", jsonError);
+        console.error("JSON processing error:", jsonError.message);
         throw new Error("Failed to process JSON data: " + jsonError.message);
       }
     } else if (contentType.includes("multipart/form-data")) {
+      // Handle form data
       try {
         const formData = await req.formData();
         const imageFile = formData.get('image');
@@ -74,7 +73,7 @@ serve(async (req) => {
         imageBase64 = btoa(String.fromCharCode(...new Uint8Array(imageBytes)));
         console.log("FormData image processed, base64 length:", imageBase64.length);
       } catch (formError) {
-        console.error("Form data processing error:", formError);
+        console.error("Form data processing error:", formError.message);
         throw new Error("Failed to process form data: " + formError.message);
       }
     } else {
@@ -90,7 +89,7 @@ serve(async (req) => {
     console.log("Processing image with vision model");
     const dataUri = `data:image/jpeg;base64,${imageBase64}`;
 
-    // First, use LLaVA or similar vision model to identify the species
+    // Use LLaVA or similar vision model to identify the species
     console.log("Sending image to vision model for species identification");
     const visionResponse = await fetch("https://api.groq.com/openai/v1/chat/completions", {
       method: "POST",
@@ -128,7 +127,7 @@ serve(async (req) => {
     const speciesIdentification = visionData.choices[0].message.content;
     console.log("Species identified:", speciesIdentification);
 
-    // Now, use the species information to generate a detailed description
+    // Generate detailed description
     console.log("Generating detailed description");
     const descriptionResponse = await fetch("https://api.groq.com/openai/v1/chat/completions", {
       method: "POST",

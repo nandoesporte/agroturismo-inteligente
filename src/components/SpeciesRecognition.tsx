@@ -1,3 +1,4 @@
+
 import React, { useState, useRef } from 'react';
 import { Camera, Aperture, Upload, RefreshCw, Info } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -117,25 +118,19 @@ const SpeciesRecognition = () => {
     reader.readAsDataURL(file);
   };
   
-  // Pre-process image to reduce size if needed
+  // Improved image preprocessing with better quality control
   const preprocessImage = (dataUrl: string): Promise<string> => {
     return new Promise((resolve) => {
-      // If image is already small enough, return as is
-      if (dataUrl.length < 500000) {
-        resolve(dataUrl);
-        return;
-      }
-      
-      // Otherwise, reduce quality
+      // Create an image element
       const img = new Image();
       img.onload = () => {
-        const canvas = document.createElement('canvas');
-        const MAX_WIDTH = 1024;
-        const MAX_HEIGHT = 1024;
+        // Calculate target dimensions
+        const MAX_WIDTH = 800;
+        const MAX_HEIGHT = 800;
         let width = img.width;
         let height = img.height;
         
-        // Calculate the new dimensions
+        // Calculate new dimensions while maintaining aspect ratio
         if (width > height) {
           if (width > MAX_WIDTH) {
             height *= MAX_WIDTH / width;
@@ -148,23 +143,40 @@ const SpeciesRecognition = () => {
           }
         }
         
+        // Create canvas and draw resized image
+        const canvas = document.createElement('canvas');
         canvas.width = width;
         canvas.height = height;
         
         const ctx = canvas.getContext('2d');
         ctx?.drawImage(img, 0, 0, width, height);
         
-        // Adjust quality based on size
+        // Start with medium quality and adjust based on size
         let quality = 0.7;
         let result = canvas.toDataURL('image/jpeg', quality);
         
-        // If still too large, reduce quality further
-        if (result.length > 1000000) {
+        console.log(`Initial processed image size: ${Math.round(result.length / 1024)}KB`);
+        
+        // If still too large, reduce quality
+        if (result.length > 500000) {
           quality = 0.5;
           result = canvas.toDataURL('image/jpeg', quality);
+          console.log(`Reduced quality to 0.5, new size: ${Math.round(result.length / 1024)}KB`);
+        }
+        
+        // If extremely large, reduce further
+        if (result.length > 200000) {
+          quality = 0.3;
+          result = canvas.toDataURL('image/jpeg', quality);
+          console.log(`Reduced quality to 0.3, new size: ${Math.round(result.length / 1024)}KB`);
         }
         
         resolve(result);
+      };
+      
+      img.onerror = () => {
+        console.error('Error loading image for preprocessing');
+        resolve(dataUrl); // Return original on error
       };
       
       img.src = dataUrl;
@@ -184,17 +196,14 @@ const SpeciesRecognition = () => {
       const processedImage = await preprocessImage(capturedImage);
       console.log("Image prepared for sending, size:", processedImage.length);
       
-      // Log the first 100 chars of the image to debug
-      console.log("Image data preview:", processedImage.substring(0, 100));
-      
-      // Create a structured payload with the image data
+      // Create payload with the image data
       const payload = {
         image: processedImage
       };
       
-      // Explicitly set content type to application/json
+      // Use the Supabase Edge Function for species recognition
       const { data, error: functionError } = await supabase.functions.invoke('species-recognition', {
-        body: payload,
+        body: JSON.stringify(payload),
         headers: {
           'Content-Type': 'application/json',
         },
@@ -208,6 +217,10 @@ const SpeciesRecognition = () => {
       if (data && data.error) {
         console.error('API error:', data.error, data.details);
         throw new Error(data.error);
+      }
+      
+      if (!data || !data.species) {
+        throw new Error('Resposta inválida do serviço de reconhecimento');
       }
       
       setSpeciesInfo(data);
