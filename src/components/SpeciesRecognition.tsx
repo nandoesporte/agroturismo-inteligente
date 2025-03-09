@@ -1,4 +1,3 @@
-
 import React, { useState, useRef } from 'react';
 import { Camera, Aperture, Upload, RefreshCw, Info } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -80,7 +79,6 @@ const SpeciesRecognition = () => {
       if (ctx) {
         ctx.drawImage(videoRef.current, 0, 0);
         
-        // Use a lower quality (0.7) to reduce file size while maintaining decent quality
         const imageDataUrl = canvas.toDataURL('image/jpeg', 0.7);
         setCapturedImage(imageDataUrl);
         stopCapture();
@@ -105,7 +103,6 @@ const SpeciesRecognition = () => {
       return;
     }
     
-    // Check file size (limit to 5MB)
     if (file.size > 5 * 1024 * 1024) {
       setError('A imagem selecionada é muito grande. Por favor, selecione uma imagem menor que 5MB.');
       return;
@@ -121,16 +118,13 @@ const SpeciesRecognition = () => {
   // Improved image preprocessing with better quality control
   const preprocessImage = (dataUrl: string): Promise<string> => {
     return new Promise((resolve) => {
-      // Create an image element
       const img = new Image();
       img.onload = () => {
-        // Calculate target dimensions - reduce size to improve API performance
         const MAX_WIDTH = 800;
         const MAX_HEIGHT = 800;
         let width = img.width;
         let height = img.height;
         
-        // Calculate new dimensions while maintaining aspect ratio
         if (width > height) {
           if (width > MAX_WIDTH) {
             height *= MAX_WIDTH / width;
@@ -143,7 +137,6 @@ const SpeciesRecognition = () => {
           }
         }
         
-        // Create canvas and draw resized image
         const canvas = document.createElement('canvas');
         canvas.width = width;
         canvas.height = height;
@@ -151,20 +144,17 @@ const SpeciesRecognition = () => {
         const ctx = canvas.getContext('2d');
         ctx?.drawImage(img, 0, 0, width, height);
         
-        // Start with medium quality and adjust based on size
         let quality = 0.7;
         let result = canvas.toDataURL('image/jpeg', quality);
         
         console.log(`Initial processed image size: ${Math.round(result.length / 1024)}KB`);
         
-        // If still too large, reduce quality
         if (result.length > 500000) {
           quality = 0.5;
           result = canvas.toDataURL('image/jpeg', quality);
           console.log(`Reduced quality to 0.5, new size: ${Math.round(result.length / 1024)}KB`);
         }
         
-        // If extremely large, reduce further
         if (result.length > 200000) {
           quality = 0.3;
           result = canvas.toDataURL('image/jpeg', quality);
@@ -176,7 +166,7 @@ const SpeciesRecognition = () => {
       
       img.onerror = () => {
         console.error('Error loading image for preprocessing');
-        resolve(dataUrl); // Return original on error
+        resolve(dataUrl);
       };
       
       img.src = dataUrl;
@@ -192,30 +182,19 @@ const SpeciesRecognition = () => {
     setSpeciesInfo(null);
     
     try {
-      // Optimize image size before sending
       const processedImage = await preprocessImage(capturedImage);
       console.log("Image prepared for sending, size:", processedImage.length);
       
-      // Verify we have valid image data
       if (!processedImage || processedImage.length < 100) {
         throw new Error('Dados de imagem inválidos. Por favor, tente novamente com outra foto.');
       }
       
-      // Create JSON payload with the image data
       const payload = {
         image: processedImage
       };
       
-      // Log payload size
-      const payloadString = JSON.stringify(payload);
-      console.log("Payload string length:", payloadString.length);
+      console.log("Payload object created, sending to edge function");
       
-      // Ensure payload is not empty
-      if (!payloadString || payloadString.length < 100) {
-        throw new Error('Dados de payload inválidos. Por favor, tente novamente.');
-      }
-      
-      // Use the Supabase Edge Function for species recognition with explicit content type
       const { data, error: functionError } = await supabase.functions.invoke('species-recognition', {
         body: payload,
         headers: {
@@ -324,7 +303,6 @@ const SpeciesRecognition = () => {
         </div>
       )}
       
-      {/* Camera View */}
       {captureMode === 'camera' && !capturedImage && (
         <div className="relative overflow-hidden rounded-lg bg-gray-50 dark:bg-gray-700 aspect-[4/3] mb-4">
           {isCapturing ? (
@@ -357,7 +335,6 @@ const SpeciesRecognition = () => {
         </div>
       )}
       
-      {/* Upload View */}
       {captureMode === 'upload' && !capturedImage && (
         <div 
           className="border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg p-8 mb-4 text-center cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors"
@@ -380,7 +357,6 @@ const SpeciesRecognition = () => {
         </div>
       )}
       
-      {/* Preview captured image */}
       {capturedImage && (
         <div className="mb-4">
           <div className="relative rounded-lg overflow-hidden aspect-[4/3] mb-3">
@@ -420,7 +396,6 @@ const SpeciesRecognition = () => {
         </div>
       )}
       
-      {/* Results Dialog */}
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
         <DialogContent className="max-w-md max-h-[80vh] overflow-y-auto">
           <DialogHeader>

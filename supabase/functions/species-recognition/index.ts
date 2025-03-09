@@ -21,7 +21,7 @@ serve(async (req) => {
 
     console.log("Request received for species recognition");
     
-    // Enhanced request body handling
+    // Enhanced request body handling with more robust checks
     let imageBase64 = "";
     let requestBody;
     
@@ -31,17 +31,9 @@ serve(async (req) => {
       console.log("Content type:", contentType);
       
       if (contentType.includes("application/json")) {
-        // Process JSON request
-        const rawBody = await req.text();
-        console.log("Raw body length:", rawBody.length);
-        
-        if (!rawBody || rawBody.trim() === '') {
-          console.error("Empty request body detected");
-          throw new Error("Empty request body received");
-        }
-        
+        // Get the request body as an object directly
         try {
-          requestBody = JSON.parse(rawBody);
+          requestBody = await req.json();
           console.log("Request body parsed as JSON successfully");
         } catch (parseError) {
           console.error("JSON parse error:", parseError.message);
@@ -54,6 +46,7 @@ serve(async (req) => {
         }
         
         imageBase64 = requestBody.image.replace(/^data:image\/[a-z]+;base64,/, "");
+        console.log("Image data length after extraction:", imageBase64.length);
       } else {
         console.error("Unsupported content type:", contentType);
         throw new Error(`Unsupported content type: ${contentType}. Expected application/json`);
