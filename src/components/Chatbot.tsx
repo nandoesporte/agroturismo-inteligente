@@ -26,19 +26,19 @@ const Typewriter = ({ message, onComplete }: TypewriterProps) => {
   
   useEffect(() => {
     if (currentIndex < message.length) {
-      const randomDelay = Math.random() * (80 - 30) + 30; // Random delay between 30ms and 80ms
+      const randomDelay = Math.random() * (50 - 20) + 20; // Faster typing for mobile
       
       // Simulate longer pauses at punctuation marks
       if (['.', '!', '?'].includes(message[currentIndex - 1])) {
         setTimeout(() => {
           setDisplayText(message.substring(0, currentIndex + 1));
           setCurrentIndex(currentIndex + 1);
-        }, randomDelay + 300); // Longer pause at sentence end
+        }, randomDelay + 200); // Shorter pause at sentence end for mobile
       } else if ([',', ';', ':'].includes(message[currentIndex - 1])) {
         setTimeout(() => {
           setDisplayText(message.substring(0, currentIndex + 1));
           setCurrentIndex(currentIndex + 1);
-        }, randomDelay + 150); // Medium pause at commas
+        }, randomDelay + 100); // Shorter pause at commas for mobile
       } else {
         setTimeout(() => {
           setDisplayText(message.substring(0, currentIndex + 1));
@@ -81,13 +81,16 @@ const Chatbot = ({ isMobile = false }: ChatbotProps) => {
   const [inputValue, setInputValue] = useState('');
   const [isTyping, setIsTyping] = useState(false);
   const [isExpanded, setIsExpanded] = useState(true);
-  const [currentTypingIndex, setCurrentTypingIndex] = useState<number | null>(null);
+  const [currentTypingIndex, setCurrentTypingIndex] = useState<number | null>(0);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
+  const chatContainerRef = useRef<HTMLDivElement>(null);
 
   // Auto-scroll to bottom when messages change
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    if (messagesEndRef.current) {
+      messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
+    }
   }, [messages, currentTypingIndex]);
 
   // Prepare context for the API from previous messages
@@ -170,7 +173,7 @@ const Chatbot = ({ isMobile = false }: ChatbotProps) => {
       
       // Add the message but mark it for typing animation
       setMessages(prev => [...prev, botResponse]);
-      setCurrentTypingIndex(prev => prev === null ? prev : prev + 1);
+      setCurrentTypingIndex(messages.length + 1);
     } catch (error) {
       console.error('Error getting response:', error);
       
@@ -215,18 +218,17 @@ const Chatbot = ({ isMobile = false }: ChatbotProps) => {
       setCurrentTypingIndex(messageIndex + 1);
     }
   };
-
-  useEffect(() => {
-    // Set the typing index to the first message when the component mounts
-    if (messages.length > 0 && currentTypingIndex === null) {
-      setCurrentTypingIndex(0);
-    }
-  }, []);
   
   return (
-    <div className={cn("flex flex-col", isMobile ? "h-[450px]" : "h-[500px]")}>
+    <div 
+      className={cn(
+        "flex flex-col h-full",
+        isMobile ? "max-h-[70vh]" : "max-h-[500px]"
+      )}
+      ref={chatContainerRef}
+    >
       {/* Header */}
-      <div className="px-4 py-3 border-b border-border bg-nature-50 dark:bg-nature-900 rounded-t-xl flex justify-between items-center">
+      <div className="px-4 py-3 border-b border-border bg-nature-50 dark:bg-nature-900 rounded-t-xl flex justify-between items-center sticky top-0 z-10">
         <div className="flex items-center gap-2">
           <div className="bg-nature-100 dark:bg-nature-800 p-1.5 rounded-full">
             <Smile className="h-5 w-5 text-nature-600 dark:text-nature-300" />
@@ -251,7 +253,9 @@ const Chatbot = ({ isMobile = false }: ChatbotProps) => {
       {(isExpanded || !isMobile) && (
         <div className={cn(
           "flex-1 overflow-y-auto p-3 md:p-4 space-y-3 md:space-y-4", 
-          isMobile ? "bg-muted/30" : "bg-gradient-to-b from-nature-50/50 to-white dark:from-gray-900/30 dark:to-gray-950"
+          isMobile 
+            ? "bg-muted/30 max-h-[calc(70vh-120px)]" 
+            : "bg-gradient-to-b from-nature-50/50 to-white dark:from-gray-900/30 dark:to-gray-950 max-h-[380px]"
         )}>
           {messages.map((message, index) => (
             <div 
@@ -339,12 +343,12 @@ const Chatbot = ({ isMobile = false }: ChatbotProps) => {
       
       {/* Input */}
       <div className={cn(
-        "p-2 md:p-3 border-t border-nature-100 dark:border-nature-800 rounded-b-xl bg-white dark:bg-gray-900", 
+        "p-2 md:p-3 border-t border-nature-100 dark:border-nature-800 rounded-b-xl bg-white dark:bg-gray-900 sticky bottom-0", 
         (!isExpanded && isMobile) && "border-t-0"
       )}>
         <div className="flex items-center space-x-2">
           <Textarea
-            className="min-h-[40px] max-h-[100px] md:max-h-[120px] p-2 bg-nature-50 dark:bg-gray-800 border border-nature-200 dark:border-gray-700 rounded-md text-sm resize-none focus-visible:ring-1 focus-visible:ring-nature-500 focus-visible:ring-offset-0"
+            className="min-h-[40px] max-h-[80px] md:max-h-[100px] p-2 bg-nature-50 dark:bg-gray-800 border border-nature-200 dark:border-gray-700 rounded-md text-sm resize-none focus-visible:ring-1 focus-visible:ring-nature-500 focus-visible:ring-offset-0"
             placeholder="Digite sua mensagem..."
             value={inputValue}
             onChange={(e) => setInputValue(e.target.value)}

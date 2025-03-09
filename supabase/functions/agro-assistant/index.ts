@@ -38,6 +38,16 @@ serve(async (req) => {
          e atividades de aventura. Diárias a partir de R$240.
       5. Quinta do Olivardo - Em São José dos Pinhais, com gastronomia portuguesa, 
          vinhos e azeites artesanais. Almoço típico: R$89 por pessoa.
+      6. Café Colonial Witmarsun - Em Witmarsum, oferece café colonial, visita à casa de queijos 
+         e passeio cultural. Entrada: R$85 por pessoa.
+      7. Chalés Vista do Vale - Em Foz do Iguaçu, com contemplação da natureza, trilhas ecológicas
+         e observação de pássaros. Diárias a partir de R$230.
+      8. Pousada Vale dos Pássaros - Em Morretes, com trilhas ecológicas, observação de pássaros
+         e cachoeiras. Diárias a partir de R$290.
+      9. Fazenda Ecoturismo Paraná - Na Lapa, com colheita orgânica, passeios a cavalo
+         e ordenha de vacas. Diárias a partir de R$245.
+      10. Vinícola Santa Felicidade - Em Colombo, com degustação de vinhos, tour pela produção
+          e culinária italiana. Diárias a partir de R$280.
          
       Experiências disponíveis:
       1. Colheita de frutas: Morangos (Ago-Dez), Uvas (Jan-Mar), Pêssegos (Nov-Jan)
@@ -62,6 +72,9 @@ serve(async (req) => {
       7. Quando mencionar preços ou horários, use EXATAMENTE os valores listados acima.
       
       Responda sempre em português de forma calorosa e demonstrando conhecimento sobre o turismo rural paranaense.
+      
+      Responda qualquer interação imediatamente, mesmo que seja apenas "olá", "oi" ou uma saudação simples.
+      Não espere pelo usuário fornecer mais informações antes de responder.
     `;
 
     // Build the messages array with context
@@ -108,9 +121,15 @@ serve(async (req) => {
   } catch (error) {
     console.error("Error:", error.message);
     return new Response(
-      JSON.stringify({ error: error.message }),
+      JSON.stringify({ 
+        response: "Olá! Parece que estou com algumas dificuldades técnicas no momento. Poderia tentar novamente daqui a pouco? Ou se preferir, entre em contato pelo WhatsApp para mais informações sobre o agroturismo no Paraná.",
+        message: { 
+          role: "assistant", 
+          content: "Olá! Parece que estou com algumas dificuldades técnicas no momento. Poderia tentar novamente daqui a pouco? Ou se preferir, entre em contato pelo WhatsApp para mais informações sobre o agroturismo no Paraná." 
+        }
+      }),
       { 
-        status: 500,
+        status: 200,
         headers: { ...corsHeaders, "Content-Type": "application/json" }
       }
     );

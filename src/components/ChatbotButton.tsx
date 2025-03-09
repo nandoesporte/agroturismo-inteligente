@@ -41,11 +41,11 @@ const ChatbotButton = () => {
       <button
         onClick={toggleChat}
         className={cn(
-          "fixed z-40 flex items-center justify-center rounded-full shadow-lg trans",
+          "fixed z-50 flex items-center justify-center rounded-full shadow-lg trans",
           isOpen ? "bg-foreground text-background" : "bg-nature-600 text-white hover:bg-nature-700",
           isMobile 
-            ? "bottom-4 right-4 w-14 h-14"
-            : "bottom-6 right-6 w-16 h-16"
+            ? "bottom-4 right-4 h-14 w-14"
+            : "bottom-6 right-6 h-16 w-16"
         )}
         aria-label={isOpen ? "Fechar chat" : "Abrir chat"}
       >
@@ -67,10 +67,9 @@ const ChatbotButton = () => {
           isOpen ? "opacity-100 scale-100" : "opacity-0 scale-95 pointer-events-none",
           isAnimating && "transition-all duration-300",
           isMobile
-            ? "bottom-20 right-4 left-4 w-auto max-w-none"
-            : "bottom-24 right-6 w-full max-w-md"
+            ? "bottom-20 right-4 left-4 w-auto max-w-none h-[70vh]"
+            : "bottom-24 right-6 w-full max-w-md h-[500px]"
         )}
-        style={{ maxHeight: isMobile ? 'calc(100vh - 120px)' : 'calc(100vh - 150px)' }}
       >
         {isOpen && <Chatbot isMobile={isMobile} />}
       </div>
