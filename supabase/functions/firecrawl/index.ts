@@ -1,3 +1,4 @@
+
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 
 const corsHeaders = {
@@ -62,40 +63,40 @@ serve(async (req) => {
       console.log(`Successfully fetched ${htmlContent.length} bytes of HTML content`);
       
       // Extract only the main content to reduce token usage
-      // Focus on main, article, or div sections with product/property info
       const mainContent = extractMainContent(htmlContent);
       
-      // Truncate content more aggressively to stay within token limits
-      // Llama3-8b has 8k token limit, so we need to be very conservative
+      // Truncate content to stay within token limits
       const truncatedContent = mainContent.length > 10000 
         ? mainContent.substring(0, 10000) + "..." 
         : mainContent;
       
       console.log(`Reduced content to ${truncatedContent.length} bytes`);
       
-      // Create a prompt for the AI to extract structured data
+      // Create a specialized prompt for the AI to extract structured data with our specific fields
       const prompt = `
         You are an expert data extraction AI. I will give you HTML content from a tourism or property website, 
         and I need you to extract structured information about properties, accommodations, or tourism experiences.
         
-        Extract up to 5 properties or experiences you find. For each one, provide:
-        1. Name of the property/experience
-        2. Description (brief, 1-2 sentences)
-        3. Location
-        4. Price (if available)
-        5. Activities or features (up to 5 items)
-        6. Amenities (up to 5 items, like Wi-Fi, Parking, Breakfast, etc.)
-        7. Operating hours (like "Mon-Fri: 9AM-5PM, Sat-Sun: 10AM-4PM")
-        8. Contact information (phone, email, website - if available)
-        9. Image URL (if found)
+        Extract up to 5 properties or experiences you find. For each one, provide ONLY the following fields:
+        1. Name (string): Name of the property/experience
+        2. Location (string): Location of the property 
+        3. Price (string): Price information exactly as it appears (with currency symbol if present)
+        4. Image (string): URL of the main image for the property
+        5. Activities (array of strings): List of up to 5 activities available
+        6. Amenities (array of strings): List of up to 5 amenities like Wi-Fi, Parking, etc.
+        7. Hours (string): Operating hours information
+        8. Contact information:
+           - Phone (string): Phone number
+           - Email (string): Email address
+           - Website (string): Website URL
         
-        Format your response as a valid JSON array with properties in this exact structure:
+        Format your response as a valid JSON array of objects with these exact field names:
         [
           {
             "name": "Property Name",
-            "description": "Description text",
             "location": "Location details",
-            "price": "Price information",
+            "price": "Price information", 
+            "image": "image url",
             "activities": ["activity1", "activity2"],
             "amenities": ["amenity1", "amenity2"],
             "hours": "Operating hours information",
@@ -103,15 +104,14 @@ serve(async (req) => {
               "phone": "phone number",
               "email": "email address",
               "website": "website url"
-            },
-            "image": "image url"
+            }
           }
         ]
         
         Only respond with the JSON. Do not include any explanations before or after the JSON.
       `;
       
-      console.log("Sending request to GROQ API for Llama extraction");
+      console.log("Sending request to GROQ API for extraction");
       
       // Make the request to the Groq API with Llama model
       const groqResponse = await fetch("https://api.groq.com/openai/v1/chat/completions", {
@@ -125,7 +125,7 @@ serve(async (req) => {
           messages: [
             { role: "user", content: prompt }
           ],
-          temperature: 0.3, // Lower temperature for more consistent output
+          temperature: 0.2, // Lower temperature for more consistent structured output
           max_tokens: 3000
         })
       });
@@ -145,7 +145,6 @@ serve(async (req) => {
         // Extract the JSON part from the AI response
         const responseContent = aiData.choices[0].message.content;
         
-        // Try to parse the JSON from the AI response
         // Look for JSON in the response (it might have text around it)
         const jsonMatch = responseContent.match(/\[[\s\S]*\]/);
         
