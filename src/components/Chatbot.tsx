@@ -5,6 +5,7 @@ import { cn } from '@/lib/utils';
 import { supabase } from '@/lib/supabase';
 import { useToast } from '@/hooks/use-toast';
 import { Textarea } from "@/components/ui/textarea";
+import { Link } from 'react-router-dom';
 
 interface Message {
   id: string;
@@ -50,7 +51,45 @@ const Typewriter = ({ message, onComplete }: TypewriterProps) => {
     }
   }, [currentIndex, message, onComplete]);
   
-  return <>{displayText}</>;
+  // Parse links in the format [text](/path)
+  const renderTextWithLinks = (text: string) => {
+    if (!text) return null;
+    
+    const linkPattern = /\[([^\]]+)\]\(([^)]+)\)/g;
+    const parts = [];
+    let lastIndex = 0;
+    let match;
+    
+    while ((match = linkPattern.exec(text)) !== null) {
+      // Add text before the link
+      if (match.index > lastIndex) {
+        parts.push(text.substring(lastIndex, match.index));
+      }
+      
+      // Add the link
+      const [fullMatch, linkText, linkHref] = match;
+      parts.push(
+        <Link 
+          key={match.index} 
+          to={linkHref} 
+          className="text-blue-500 hover:underline"
+        >
+          {linkText}
+        </Link>
+      );
+      
+      lastIndex = match.index + fullMatch.length;
+    }
+    
+    // Add remaining text
+    if (lastIndex < text.length) {
+      parts.push(text.substring(lastIndex));
+    }
+    
+    return parts.length > 0 ? parts : text;
+  };
+  
+  return <>{renderTextWithLinks(displayText)}</>;
 };
 
 interface ChatbotProps {
@@ -69,11 +108,11 @@ const initialMessages: Message[] = [
 ];
 
 const suggestedQuestions = [
-  'Quais propriedades rurais posso visitar?',
-  'Onde posso degustar vinhos no Paraná?',
-  'Quais experiências de colheita existem?',
-  'Quais são os horários de funcionamento?',
-  'Quanto custa visitar a Fazenda Santa Clara?'
+  { text: 'Quais propriedades rurais posso visitar?', link: '/properties' },
+  { text: 'Onde posso degustar vinhos no Paraná?', link: '/properties?tag=vinícola' },
+  { text: 'Quais experiências de colheita existem?', link: '/experiences' },
+  { text: 'Quais são os horários de funcionamento?', link: null },
+  { text: 'Como faço para reconhecer plantas da região?', link: '/species-recognition' }
 ];
 
 const Chatbot = ({ isMobile = false }: ChatbotProps) => {
@@ -224,6 +263,44 @@ const Chatbot = ({ isMobile = false }: ChatbotProps) => {
     }
   };
   
+  // Parse links in the format [text](/path) in message text
+  const renderMessageWithLinks = (text: string) => {
+    if (!text) return null;
+    
+    const linkPattern = /\[([^\]]+)\]\(([^)]+)\)/g;
+    const parts = [];
+    let lastIndex = 0;
+    let match;
+    
+    while ((match = linkPattern.exec(text)) !== null) {
+      // Add text before the link
+      if (match.index > lastIndex) {
+        parts.push(text.substring(lastIndex, match.index));
+      }
+      
+      // Add the link
+      const [fullMatch, linkText, linkHref] = match;
+      parts.push(
+        <Link 
+          key={match.index} 
+          to={linkHref} 
+          className="text-blue-500 hover:underline"
+        >
+          {linkText}
+        </Link>
+      );
+      
+      lastIndex = match.index + fullMatch.length;
+    }
+    
+    // Add remaining text
+    if (lastIndex < text.length) {
+      parts.push(text.substring(lastIndex));
+    }
+    
+    return <>{parts}</>;
+  };
+  
   return (
     <div 
       className={cn(
@@ -295,16 +372,16 @@ const Chatbot = ({ isMobile = false }: ChatbotProps) => {
                     {message.sender === 'user' ? 'Você' : 'AgroGuia'}
                   </span>
                 </div>
-                <p className="text-sm whitespace-pre-wrap break-words">
+                <div className="text-sm whitespace-pre-wrap break-words">
                   {index === currentTypingIndex ? (
                     <Typewriter 
                       message={message.text} 
                       onComplete={() => handleTypingComplete(index)}
                     />
                   ) : (
-                    index < (currentTypingIndex || 0) ? message.text : ""
+                    index < (currentTypingIndex || 0) ? renderMessageWithLinks(message.text) : ""
                   )}
-                </p>
+                </div>
                 <div className="text-right mt-1">
                   <span className="text-xs opacity-70">
                     {`${message.timestamp.getHours().toString().padStart(2, '0')}:${message.timestamp.getMinutes().toString().padStart(2, '0')}`}
@@ -334,14 +411,32 @@ const Chatbot = ({ isMobile = false }: ChatbotProps) => {
           <p className="text-xs text-nature-600 dark:text-nature-400 mb-1 md:mb-2">Perguntas sugeridas:</p>
           <div className="flex flex-wrap gap-2">
             {suggestedQuestions.map((question, index) => (
-              <button
-                key={index}
-                className="text-xs px-2 py-1 md:px-3 md:py-1.5 border border-nature-200 dark:border-nature-800 rounded-full bg-nature-50 dark:bg-nature-900 hover:bg-nature-100 dark:hover:bg-nature-800 text-nature-700 dark:text-nature-300 transition-colors"
-                onClick={() => handleSuggestedQuestion(question)}
-                disabled={isLoading}
-              >
-                {question}
-              </button>
+              question.link ? (
+                <div className="flex" key={index}>
+                  <button
+                    className="text-xs px-2 py-1 md:px-3 md:py-1.5 border border-nature-200 dark:border-nature-800 rounded-l-full bg-nature-50 dark:bg-nature-900 hover:bg-nature-100 dark:hover:bg-nature-800 text-nature-700 dark:text-nature-300 transition-colors"
+                    onClick={() => handleSuggestedQuestion(question.text)}
+                    disabled={isLoading}
+                  >
+                    {question.text}
+                  </button>
+                  <Link
+                    to={question.link}
+                    className="flex items-center justify-center text-xs px-2 md:px-3 border border-l-0 border-nature-200 dark:border-nature-800 rounded-r-full bg-nature-100 dark:bg-nature-800 hover:bg-nature-200 dark:hover:bg-nature-700 text-nature-700 dark:text-nature-300 transition-colors"
+                  >
+                    Ver
+                  </Link>
+                </div>
+              ) : (
+                <button
+                  key={index}
+                  className="text-xs px-2 py-1 md:px-3 md:py-1.5 border border-nature-200 dark:border-nature-800 rounded-full bg-nature-50 dark:bg-nature-900 hover:bg-nature-100 dark:hover:bg-nature-800 text-nature-700 dark:text-nature-300 transition-colors"
+                  onClick={() => handleSuggestedQuestion(question.text)}
+                  disabled={isLoading}
+                >
+                  {question.text}
+                </button>
+              )
             ))}
           </div>
         </div>
