@@ -16,6 +16,7 @@ import Experiences from "./pages/Experiences";
 import Map from "./pages/Map";
 import About from "./pages/About";
 import NotFound from "./pages/NotFound";
+import SpeciesRecognitionPage from "./pages/SpeciesRecognitionPage";
 
 // Auth Pages
 import Login from "./pages/auth/Login";
@@ -55,6 +56,7 @@ const App = () => (
               <Route path="/experiences" element={<Experiences />} />
               <Route path="/map" element={<Map />} />
               <Route path="/about" element={<About />} />
+              <Route path="/species-recognition" element={<SpeciesRecognitionPage />} />
               
               {/* Rotas de autenticação */}
               <Route path="/auth/login" element={<Login />} />
