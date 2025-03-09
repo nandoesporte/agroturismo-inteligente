@@ -11,30 +11,29 @@ const Hero = () => {
   const [isLoaded, setIsLoaded] = useState(false);
   const [showScrollHint, setShowScrollHint] = useState(true);
 
-  // Updated slides with darker landscape images focused on agrotourism
   const slides = [
     {
-      image: '/lovable-uploads/d9be2388-05d8-48cb-ab19-5ea416452eee.png',
+      image: 'https://images.unsplash.com/photo-1508193638397-1c4234db14d8?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=2070&q=80',
       title: 'Descubra o Agroturismo no Paraná',
       subtitle: 'Experiências autênticas em meio à natureza e cultura rural'
     },
     {
-      image: 'https://images.unsplash.com/photo-1472396961693-142e6e269027?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=2070&q=80',
+      image: 'https://images.unsplash.com/photo-1468276311594-df7cb65d8df6?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=2070&q=80',
       title: 'Sabores da Terra',
       subtitle: 'Conheça as delícias da gastronomia rural paranaense'
     },
     {
-      image: 'https://images.unsplash.com/photo-1465379944081-7f47de8d74ac?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=2070&q=80',
+      image: 'https://images.unsplash.com/photo-1470770841072-f978cf4d019e?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=2070&q=80',
       title: 'Paisagens Deslumbrantes',
       subtitle: 'Caminhos e trilhas para se conectar com a natureza'
     },
     {
-      image: 'https://images.unsplash.com/photo-1493962853295-0fd70327578a?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=2070&q=80',
+      image: 'https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1470&q=80',
       title: 'Fazendas Históricas',
       subtitle: 'Conheça a história e a cultura das fazendas centenárias do Paraná'
     },
     {
-      image: 'https://images.unsplash.com/photo-1485833077593-4278bba3f11f?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=2070&q=80',
+      image: 'https://images.unsplash.com/photo-1500382017468-9049fed747ef?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1932&q=80',
       title: 'Vida Rural Autêntica',
       subtitle: 'Experiências genuínas de convivência com famílias rurais'
     }
@@ -94,8 +93,7 @@ const Hero = () => {
           }`}
           aria-hidden={currentSlide !== index}
         >
-          {/* Updated gradient overlay to be darker for better text readability */}
-          <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/50 to-black/40 z-10" />
+          <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/40 to-black/30 z-10" />
           <img
             src={slide.image}
             alt={slide.title}
