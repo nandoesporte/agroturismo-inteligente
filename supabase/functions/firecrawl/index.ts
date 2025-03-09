@@ -67,7 +67,6 @@ serve(async (req) => {
         const zytePayload = {
           url: url,
           browserHtml: true,
-          // Using the correct schema structure based on Zyte API docs
           article: {
             headline: true,
             datePublished: true,
@@ -82,7 +81,6 @@ serve(async (req) => {
             price: true,
             images: true
           },
-          // For tourism and property sites, using the correct selectors
           additionalSelectors: [
             {
               name: "propertyInfo",
