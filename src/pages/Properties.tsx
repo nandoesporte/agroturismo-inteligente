@@ -11,70 +11,8 @@ import { Label } from '@/components/ui/label';
 import { Filter, Map, SlidersHorizontal, X } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import ChatbotButton from '@/components/ChatbotButton';
-
-// Dados simulados para propriedades
-const propertiesData: Property[] = [
-  {
-    id: "1",
-    name: "Fazenda Vale Verde",
-    location: "Morretes, PR",
-    price: 120,
-    rating: 4.8,
-    reviewCount: 98,
-    image: "https://images.unsplash.com/photo-1516253593875-bd7ba052fbc5?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1470&q=80",
-    tags: ["Café Colonial", "Trilhas", "Pousada"]
-  },
-  {
-    id: "2",
-    name: "Vinícola Santa Clara",
-    location: "Bituruna, PR",
-    price: 150,
-    rating: 4.9,
-    reviewCount: 124,
-    image: "https://images.unsplash.com/photo-1559519529-0936e4058364?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1472&q=80",
-    tags: ["Vinhos", "Degustação", "Colheita"]
-  },
-  {
-    id: "3",
-    name: "Recanto das Araucárias",
-    location: "Guarapuava, PR",
-    price: 135,
-    rating: 4.7,
-    reviewCount: 87,
-    image: "https://images.unsplash.com/photo-1615880484746-a134be9a6ecf?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1470&q=80",
-    tags: ["Pinhão", "Cavalos", "Camping"]
-  },
-  {
-    id: "4",
-    name: "Sítio Água Cristalina",
-    location: "Tibagi, PR",
-    price: 100,
-    rating: 4.6,
-    reviewCount: 56,
-    image: "https://images.unsplash.com/photo-1593602828332-a6d8e3f7c386?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1470&q=80",
-    tags: ["Cachoeira", "Frutas", "Tirolesa"]
-  },
-  {
-    id: "5",
-    name: "Fazenda Arapongas",
-    location: "Castro, PR",
-    price: 180,
-    rating: 4.9,
-    reviewCount: 112,
-    image: "https://images.unsplash.com/photo-1571989569744-4c678117f85e?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1467&q=80",
-    tags: ["Produtos Artesanais", "Ordenha", "Queijos"]
-  },
-  {
-    id: "6",
-    name: "Estância Pé da Serra",
-    location: "Antonina, PR",
-    price: 145,
-    rating: 4.7,
-    reviewCount: 75,
-    image: "https://images.unsplash.com/photo-1596412545575-11146b7d9374?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1470&q=80",
-    tags: ["Mata Atlântica", "Café da Manhã", "Pescaria"]
-  }
-];
+import { supabase } from '@/lib/supabase';
+import { Loader2 } from 'lucide-react';
 
 // Categorias de filtro
 const categories = [
@@ -88,13 +26,50 @@ const activities = [
 ];
 
 const Properties = () => {
-  const [properties, setProperties] = useState<Property[]>(propertiesData);
-  const [filteredProperties, setFilteredProperties] = useState<Property[]>(propertiesData);
+  const [properties, setProperties] = useState<Property[]>([]);
+  const [filteredProperties, setFilteredProperties] = useState<Property[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [showFilters, setShowFilters] = useState(false);
   const [priceRange, setPriceRange] = useState([0, 200]);
   const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
   const [selectedActivities, setSelectedActivities] = useState<string[]>([]);
+  const [loading, setLoading] = useState(true);
+  
+  useEffect(() => {
+    fetchProperties();
+  }, []);
+  
+  const fetchProperties = async () => {
+    setLoading(true);
+    try {
+      const { data, error } = await supabase
+        .from('properties')
+        .select('*');
+      
+      if (error) throw error;
+      
+      // Transform the data to match the Property interface
+      const transformedProperties = data.map(item => ({
+        id: item.id,
+        name: item.name,
+        location: item.location,
+        price: typeof item.price === 'number' ? item.price : 0,
+        rating: item.rating || 0,
+        reviewCount: item.review_count || 0,
+        image: item.image || 'https://images.unsplash.com/photo-1566043641507-95a1226a03c1?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1470&q=80',
+        images: item.images || [],
+        tags: item.tags || [],
+        isFeatured: item.is_featured
+      }));
+      
+      setProperties(transformedProperties);
+      setFilteredProperties(transformedProperties);
+    } catch (error: any) {
+      console.error('Error fetching properties:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
   
   // Filtrar propriedades com base nos critérios selecionados
   useEffect(() => {
@@ -318,10 +293,15 @@ const Properties = () => {
           </div>
           
           {/* Properties Grid */}
-          {filteredProperties.length > 0 ? (
+          {loading ? (
+            <div className="text-center py-12">
+              <Loader2 className="h-10 w-10 animate-spin mx-auto mb-4 text-nature-600" />
+              <p className="text-muted-foreground">Carregando propriedades...</p>
+            </div>
+          ) : filteredProperties.length > 0 ? (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {filteredProperties.map(property => (
-                <PropertyCard key={property.id} property={property} />
+              {filteredProperties.map((property, index) => (
+                <PropertyCard key={property.id} property={property} index={index} />
               ))}
             </div>
           ) : (

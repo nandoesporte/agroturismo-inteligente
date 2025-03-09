@@ -1,10 +1,11 @@
 
 import React, { useState, useEffect } from 'react';
-import { ArrowLeft, ArrowRight } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Loader2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import PropertyCard, { Property } from './PropertyCard';
 import { Button } from '@/components/ui/button';
 import { supabase } from '@/lib/supabase';
+import { Link } from 'react-router-dom';
 
 const FeaturedProperties = () => {
   const [isVisible, setIsVisible] = useState(false);
@@ -40,10 +41,11 @@ const FeaturedProperties = () => {
         id: item.id,
         name: item.name,
         location: item.location,
-        price: item.price,
+        price: typeof item.price === 'number' ? item.price : 0,
         rating: item.rating || 0,
         reviewCount: item.review_count || 0,
         image: item.image || 'https://images.unsplash.com/photo-1566043641507-95a1226a03c1?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1470&q=80',
+        images: item.images || [],
         tags: item.tags || [],
         isFeatured: item.is_featured
       }));
@@ -116,19 +118,22 @@ const FeaturedProperties = () => {
                   isVisible && index === 1 && "animation-delay-100",
                   isVisible && index === 2 && "animation-delay-200"
                 )}
+                index={index}
               />
             ))}
           </div>
         )}
         
         <div className="mt-8 text-center">
-          <Button 
-            variant="outline" 
-            className="border-nature-200 hover:border-nature-300 hover:bg-nature-50"
-          >
-            Ver Todas as Propriedades
-            <ArrowRight className="ml-2 h-4 w-4" />
-          </Button>
+          <Link to="/properties">
+            <Button 
+              variant="outline" 
+              className="border-nature-200 hover:border-nature-300 hover:bg-nature-50"
+            >
+              Ver Todas as Propriedades
+              <ArrowRight className="ml-2 h-4 w-4" />
+            </Button>
+          </Link>
         </div>
       </div>
     </section>

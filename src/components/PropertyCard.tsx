@@ -1,9 +1,10 @@
 
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { Star, MapPin, Bookmark } from 'lucide-react';
+import { Star, MapPin, Bookmark, ChevronLeft, ChevronRight } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { motion } from 'framer-motion';
+import { useState } from 'react';
 
 export interface Property {
   id: string;
@@ -13,6 +14,7 @@ export interface Property {
   rating: number;
   reviewCount: number;
   image: string;
+  images?: string[];
   tags: string[];
   isFeatured?: boolean;
 }
@@ -30,6 +32,29 @@ const PropertyCard: React.FC<PropertyCardProps> = ({
   featured = false,
   index = 0
 }) => {
+  const [currentImageIndex, setCurrentImageIndex] = useState(0);
+  
+  // Get the displayed image (either from images array or fallback to the main image)
+  const displayImages = property.images && property.images.length > 0 
+    ? property.images 
+    : [property.image];
+  
+  const handlePrevImage = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setCurrentImageIndex(prev => 
+      prev === 0 ? displayImages.length - 1 : prev - 1
+    );
+  };
+  
+  const handleNextImage = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setCurrentImageIndex(prev => 
+      prev === displayImages.length - 1 ? 0 : prev + 1
+    );
+  };
+
   return (
     <motion.div
       initial={{ opacity: 0, y: 20 }}
@@ -46,10 +71,43 @@ const PropertyCard: React.FC<PropertyCardProps> = ({
       >
         <div className="relative aspect-[4/3] overflow-hidden rounded-t-xl">
           <img 
-            src={property.image} 
+            src={displayImages[currentImageIndex]} 
             alt={property.name}
             className="w-full h-full object-cover trans group-hover:scale-105"
           />
+          
+          {displayImages.length > 1 && (
+            <>
+              <button 
+                onClick={handlePrevImage}
+                className="absolute left-2 top-1/2 -translate-y-1/2 p-1 rounded-full bg-black/30 hover:bg-black/50 text-white transition-all"
+                aria-label="Imagem anterior"
+              >
+                <ChevronLeft className="h-5 w-5" />
+              </button>
+              <button 
+                onClick={handleNextImage}
+                className="absolute right-2 top-1/2 -translate-y-1/2 p-1 rounded-full bg-black/30 hover:bg-black/50 text-white transition-all"
+                aria-label="Próxima imagem"
+              >
+                <ChevronRight className="h-5 w-5" />
+              </button>
+              
+              {/* Image indicators */}
+              <div className="absolute bottom-2 left-1/2 -translate-x-1/2 flex gap-1">
+                {displayImages.map((_, idx) => (
+                  <div 
+                    key={idx} 
+                    className={cn(
+                      "w-1.5 h-1.5 rounded-full bg-white/70",
+                      idx === currentImageIndex && "w-2.5 bg-white"
+                    )}
+                  />
+                ))}
+              </div>
+            </>
+          )}
+          
           {property.isFeatured && (
             <span className="absolute top-3 left-3 bg-nature-600 text-white text-xs font-medium px-3 py-1 rounded-full shadow-sm">
               Destaque
@@ -59,6 +117,7 @@ const PropertyCard: React.FC<PropertyCardProps> = ({
           <button 
             className="absolute top-3 right-3 p-2 rounded-full bg-white/80 backdrop-blur-sm hover:bg-white text-muted-foreground hover:text-rose-500 transition-all"
             aria-label="Favoritar"
+            onClick={(e) => e.preventDefault()}
           >
             <Bookmark className="h-4 w-4" />
           </button>
@@ -101,8 +160,14 @@ const PropertyCard: React.FC<PropertyCardProps> = ({
           
           <div className="mt-4 border-t border-border pt-3">
             <div className="flex items-baseline">
-              <span className="font-medium text-lg">R$ {property.price}</span>
-              <span className="text-sm text-muted-foreground ml-1">/ por pessoa</span>
+              {property.price > 0 ? (
+                <>
+                  <span className="font-medium text-lg">R$ {property.price.toFixed(2)}</span>
+                  <span className="text-sm text-muted-foreground ml-1">/ por pessoa</span>
+                </>
+              ) : (
+                <span className="text-sm text-muted-foreground">Preço sob consulta</span>
+              )}
             </div>
           </div>
         </div>

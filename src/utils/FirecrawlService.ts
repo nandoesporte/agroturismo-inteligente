@@ -1,3 +1,4 @@
+
 // Add any necessary imports here if needed
 
 export interface ExtractedProperty {
@@ -14,6 +15,7 @@ export interface ExtractedProperty {
     website?: string;
   };
   image?: string;
+  images?: string[];
 }
 
 class FirecrawlServiceClass {
@@ -70,7 +72,6 @@ class FirecrawlServiceClass {
     return properties.map(property => {
       // Clean and normalize price
       let normalizedPrice = property.price || '';
-      // Keep original price format for display, but ensure it can be parsed later
       
       // Make sure arrays are actually arrays
       const activities = Array.isArray(property.activities) 
@@ -80,6 +81,11 @@ class FirecrawlServiceClass {
       const amenities = Array.isArray(property.amenities) 
         ? property.amenities 
         : property.amenities ? [property.amenities] : [];
+      
+      // Convert single image to images array if needed
+      const images = Array.isArray(property.images) 
+        ? property.images 
+        : property.image ? [property.image] : [];
       
       return {
         name: property.name || 'Propriedade sem nome',
@@ -94,7 +100,8 @@ class FirecrawlServiceClass {
           email: property.contact?.email || '',
           website: property.contact?.website || ''
         },
-        image: property.image || ''
+        image: property.image || '',
+        images: images
       };
     });
   }

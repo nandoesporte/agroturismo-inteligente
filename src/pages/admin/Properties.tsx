@@ -72,6 +72,7 @@ const AdminProperties = () => {
     location: '',
     price: '',
     image: '',
+    images: [] as string[],
     tags: '',
     amenities: '',
     hours: '',
@@ -116,6 +117,16 @@ const AdminProperties = () => {
     setFormData(prev => ({ ...prev, [name]: value }));
   };
 
+  const handleImagesChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    const imagesText = e.target.value;
+    const imagesArray = imagesText
+      .split('\n')
+      .map(url => url.trim())
+      .filter(url => url.length > 0);
+    
+    setFormData(prev => ({ ...prev, images: imagesArray }));
+  };
+
   const handleCheckboxChange = (checked: boolean) => {
     setFormData(prev => ({ ...prev, is_featured: checked }));
   };
@@ -127,6 +138,7 @@ const AdminProperties = () => {
       location: property.location,
       price: property.price.toString(),
       image: property.image || '',
+      images: property.images || [],
       tags: property.tags ? property.tags.join(', ') : '',
       amenities: property.amenities ? property.amenities.join(', ') : '',
       hours: property.hours || '',
@@ -151,6 +163,7 @@ const AdminProperties = () => {
         location: formData.location.trim(),
         price: parseFloat(formData.price),
         image: formData.image.trim(),
+        images: formData.images,
         tags: formData.tags.split(',').map(tag => tag.trim()).filter(tag => tag),
         amenities: formData.amenities.split(',').map(amenity => amenity.trim()).filter(amenity => amenity),
         hours: formData.hours.trim(),
@@ -235,6 +248,7 @@ const AdminProperties = () => {
       location: '',
       price: '',
       image: '',
+      images: [],
       tags: '',
       amenities: '',
       hours: '',
@@ -251,6 +265,7 @@ const AdminProperties = () => {
       location: property.location || '',
       price: property.price ? property.price.toString() : '',
       image: property.image || '',
+      images: property.images || [],
       tags: Array.isArray(property.tags) ? property.tags.join(', ') : '',
       amenities: Array.isArray(property.amenities) ? property.amenities.join(', ') : '',
       hours: property.hours || '',
@@ -623,7 +638,7 @@ const AdminProperties = () => {
                         />
                       </div>
                       <div className="col-span-1 md:col-span-2">
-                        <Label htmlFor="image">URL da Imagem</Label>
+                        <Label htmlFor="image">URL da Imagem Principal</Label>
                         <div className="flex gap-2 flex-col sm:flex-row">
                           <Input
                             id="image"
@@ -637,6 +652,16 @@ const AdminProperties = () => {
                             Upload
                           </Button>
                         </div>
+                      </div>
+                      <div className="col-span-1 md:col-span-2">
+                        <Label htmlFor="additionalImages">Imagens Adicionais (uma URL por linha)</Label>
+                        <Textarea
+                          id="additionalImages"
+                          value={formData.images.join('\n')}
+                          onChange={handleImagesChange}
+                          placeholder="https://example.com/image1.jpg&#10;https://example.com/image2.jpg"
+                          className="h-24"
+                        />
                       </div>
                       <div className="col-span-1">
                         <Label htmlFor="tags">Atividades (separadas por vírgula)</Label>
