@@ -27,11 +27,11 @@ serve(async (req) => {
   }
 
   try {
-    // Use the Zyte API key
-    const ZYTE_API_KEY = Deno.env.get("ZYTE_API_KEY");
+    // Use the GROQ API key for Llama model
+    const GROQ_API_KEY = Deno.env.get("GROQ_API_KEY");
     
-    if (!ZYTE_API_KEY) {
-      throw new Error("Missing Zyte API key");
+    if (!GROQ_API_KEY) {
+      throw new Error("Missing GROQ API key");
     }
 
     const { url } = await req.json();
@@ -46,161 +46,142 @@ serve(async (req) => {
       );
     }
 
-    console.log(`Scraping data from URL: ${url}`);
+    console.log(`Extracting data from URL: ${url}`);
 
-    // Primary and fallback endpoints
-    const endpoints = [
-      "https://api.zyte.com/v1/extract", 
-      "https://extraction.zyte.com/v1/extract"
-    ];
-    
-    let zyteData = null;
-    let usedEndpoint = "";
-    let errorMessages = [];
-    
-    // Try each endpoint until one works
-    for (const endpoint of endpoints) {
+    // First, fetch the HTML content of the website
+    try {
+      console.log(`Fetching content from URL: ${url}`);
+      const fetchResponse = await fetch(url);
+      
+      if (!fetchResponse.ok) {
+        throw new Error(`Failed to fetch URL content: ${fetchResponse.status}`);
+      }
+      
+      const htmlContent = await fetchResponse.text();
+      console.log(`Successfully fetched ${htmlContent.length} bytes of HTML content`);
+      
+      // Truncate content if too large (Llama has token limits)
+      const truncatedContent = htmlContent.length > 30000 
+        ? htmlContent.substring(0, 30000) + "..." 
+        : htmlContent;
+      
+      // Create a prompt for the AI to extract structured data
+      const prompt = `
+        You are an expert data extraction AI. I will give you HTML content from a tourism or property website, 
+        and I need you to extract structured information about properties, accommodations, or tourism experiences.
+        
+        For each property or experience you find, extract:
+        1. Name of the property/experience
+        2. Description
+        3. Location
+        4. Price (if available)
+        5. Activities or features (as a list)
+        6. Contact information (phone, email, website)
+        7. Image URL (if found)
+        
+        Format your response as a valid JSON array with properties in this exact structure:
+        [
+          {
+            "name": "Property Name",
+            "description": "Description text",
+            "location": "Location details",
+            "price": "Price information",
+            "activities": ["activity1", "activity2"],
+            "contact": {
+              "phone": "phone number",
+              "email": "email address",
+              "website": "website url"
+            },
+            "image": "image url"
+          }
+        ]
+        
+        Here is the HTML content:
+        ${truncatedContent}
+        
+        Only respond with the JSON. Do not include any explanations before or after the JSON.
+      `;
+      
+      console.log("Sending request to GROQ API for Llama extraction");
+      
+      // Make the request to the Groq API with Llama model
+      const groqResponse = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+        method: "POST",
+        headers: {
+          "Authorization": `Bearer ${GROQ_API_KEY}`,
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          model: "llama3-8b-8192",
+          messages: [
+            { role: "user", content: prompt }
+          ],
+          temperature: 0.3, // Lower temperature for more consistent output
+          max_tokens: 4000
+        })
+      });
+
+      if (!groqResponse.ok) {
+        const errorData = await groqResponse.text();
+        console.error("GROQ API error:", errorData);
+        throw new Error(`GROQ API error: ${groqResponse.status}`);
+      }
+
+      const aiData = await groqResponse.json();
+      console.log("Received response from GROQ API");
+      
+      let extractedProperties: ExtractedProperty[] = [];
+      
       try {
-        console.log(`Attempting to connect to Zyte API endpoint: ${endpoint}`);
+        // Extract the JSON part from the AI response
+        const responseContent = aiData.choices[0].message.content;
         
-        // Updated request structure for Zyte API
-        const zytePayload = {
-          url: url,
-          browserHtml: true,
-          article: {
-            headline: true,
-            datePublished: true,
-            author: true,
-            description: true,
-            text: true,
-            image: true
-          },
-          product: {
-            name: true,
-            description: true,
-            price: true,
-            images: true
-          },
-          additionalSelectors: [
-            {
-              name: "propertyInfo",
-              selector: [
-                "div.property-card",
-                "div.listing-item",
-                "article.property", 
-                ".property-listing", 
-                ".destination-item", 
-                ".product-card", 
-                ".tour-item", 
-                ".accommodation-item", 
-                ".card", 
-                ".item", 
-                ".product",
-                ".experience-card",
-                ".tour-card",
-                ".farm-experience",
-                ".rural-lodging",
-                ".agritourism-item"
-              ],
-              type: "group",
-              extractors: {
-                name: {
-                  selector: ["h1", "h2", "h3", "h4", ".title", ".name", ".heading", ".product-title"],
-                  type: "text"
-                },
-                description: {
-                  selector: ["p", ".description", ".excerpt", ".summary", ".text", ".info", ".details", ".content"],
-                  type: "text"
-                },
-                location: {
-                  selector: [".location", ".address", ".place", ".region", ".city", ".area", "[itemprop='address']"],
-                  type: "text"
-                },
-                price: {
-                  selector: [".price", ".cost", ".value", ".rate", ".amount", "[itemprop='price']"],
-                  type: "text"
-                },
-                image: {
-                  selector: ["img", ".image", ".photo", ".picture", "[itemprop='image']"],
-                  type: "attribute",
-                  attribute: "src"
-                },
-                activities: {
-                  selector: [".activities", ".features", ".amenities", ".tags", ".category", ".attractions"],
-                  type: "list"
-                },
-                contactPhone: {
-                  selector: [".phone", "[href^='tel:']", ".telephone", ".contact", "[itemprop='telephone']"],
-                  type: "text"
-                },
-                contactEmail: {
-                  selector: [".email", "[href^='mailto:']", "[itemprop='email']"],
-                  type: "text"
-                },
-                contactWebsite: {
-                  selector: ["a.website", "a.site", ".external-link", "a[href^='http']", "[itemprop='url']"],
-                  type: "attribute",
-                  attribute: "href"
-                }
-              }
-            }
-          ]
-        };
+        // Try to parse the JSON from the AI response
+        // Look for JSON in the response (it might have text around it)
+        const jsonMatch = responseContent.match(/\[[\s\S]*\]/);
         
-        // Make the request to Zyte API with increased timeout
-        const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 15000); // 15 second timeout
-        
-        const zyteResponse = await fetch(endpoint, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            "Authorization": `Basic ${btoa(ZYTE_API_KEY + ":")}`
-          },
-          body: JSON.stringify(zytePayload),
-          signal: controller.signal
-        });
-        
-        clearTimeout(timeoutId);
-
-        if (!zyteResponse.ok) {
-          const errorText = await zyteResponse.text();
-          throw new Error(`Zyte API error (${zyteResponse.status}): ${errorText}`);
+        if (jsonMatch) {
+          extractedProperties = JSON.parse(jsonMatch[0]);
+          console.log(`Successfully parsed ${extractedProperties.length} properties from AI response`);
+        } else {
+          console.log("No JSON array found in AI response, attempting to parse entire response");
+          // If no clear JSON array is found, try to parse the whole response
+          extractedProperties = JSON.parse(responseContent);
         }
-
-        zyteData = await zyteResponse.json();
-        usedEndpoint = endpoint;
-        console.log(`Successfully connected to endpoint: ${endpoint}`);
-        break; // Exit the loop if successful
-      } catch (error) {
-        console.error(`Error with endpoint ${endpoint}:`, error.message);
-        errorMessages.push(`${endpoint}: ${error.message}`);
+      } catch (parseError) {
+        console.error("Error parsing AI response:", parseError);
+        console.log("AI response content:", aiData.choices[0].message.content);
         
-        // Continue to the next endpoint
+        // Create a fallback property if parsing fails
+        extractedProperties = [{
+          name: "Website Content",
+          description: "Unable to extract structured data. Consider reviewing the website manually.",
+          location: url,
+          contact: {
+            website: url
+          }
+        }];
       }
-    }
-    
-    if (!zyteData) {
-      throw new Error(`Failed to connect to any Zyte API endpoint. Errors: ${errorMessages.join('; ')}`);
-    }
+      
+      // Clean up and normalize the extracted properties
+      const normalizedProperties = normalizeProperties(extractedProperties);
 
-    console.log(`Received response from Zyte API using endpoint: ${usedEndpoint}`);
-    
-    // Process and clean the extracted data
-    const extractedProperties = processZyteResponse(zyteData);
-    console.log(`Processed ${extractedProperties.length} properties`);
+      return new Response(
+        JSON.stringify({ 
+          success: true, 
+          properties: normalizedProperties,
+          rawData: aiData,
+          endpoint: "GROQ API with Llama 3"
+        }),
+        { 
+          headers: { ...corsHeaders, "Content-Type": "application/json" } 
+        }
+      );
 
-    return new Response(
-      JSON.stringify({ 
-        success: true, 
-        properties: extractedProperties,
-        rawData: zyteData,
-        endpoint: usedEndpoint
-      }),
-      { 
-        headers: { ...corsHeaders, "Content-Type": "application/json" } 
-      }
-    );
+    } catch (fetchError) {
+      console.error("Error fetching website:", fetchError.message);
+      throw new Error(`Failed to fetch website content: ${fetchError.message}`);
+    }
   } catch (error) {
     console.error("Error:", error.message);
     return new Response(
@@ -213,125 +194,23 @@ serve(async (req) => {
   }
 });
 
-// Helper function to process Zyte API response
-function processZyteResponse(data: any): ExtractedProperty[] {
-  const extractedProperties: ExtractedProperty[] = [];
-  
-  // Check if we have property data in additionalSelectors
-  if (data && data.additionalSelectors && Array.isArray(data.additionalSelectors)) {
-    const propertyInfoItems = data.additionalSelectors.filter(item => item.name === "propertyInfo");
-    
-    if (propertyInfoItems.length > 0 && Array.isArray(propertyInfoItems[0].results)) {
-      console.log(`Found ${propertyInfoItems[0].results.length} property listings in additionalSelectors`);
-      
-      propertyInfoItems[0].results.forEach((item: any) => {
-        const property: ExtractedProperty = {
-          name: normalizeText(item.name),
-          description: normalizeText(item.description),
-          location: normalizeText(item.location),
-          price: normalizeText(item.price),
-          activities: normalizeArray(item.activities),
-          image: normalizeUrl(item.image),
-          contact: {
-            phone: normalizeText(item.contactPhone),
-            email: normalizeText(item.contactEmail),
-            website: normalizeUrl(item.contactWebsite)
-          }
-        };
-        
-        extractedProperties.push(property);
-      });
-    }
-  }
-  
-  // If no properties found, try to get data from product info
-  if (extractedProperties.length === 0 && data && data.product) {
-    console.log("No property listings found in additionalSelectors, checking product data");
-    
-    const property: ExtractedProperty = {
-      name: normalizeText(data.product.name),
-      description: normalizeText(data.product.description),
-      price: normalizeText(data.product.price),
-      image: data.product.images && data.product.images.length > 0 ? 
-        normalizeUrl(data.product.images[0]) : '',
+// Helper function to normalize the extracted properties
+function normalizeProperties(properties: any[]): ExtractedProperty[] {
+  return properties.map(property => {
+    return {
+      name: normalizeText(property.name),
+      description: normalizeText(property.description),
+      location: normalizeText(property.location),
+      price: normalizeText(property.price),
+      activities: normalizeArray(property.activities),
+      image: normalizeUrl(property.image),
       contact: {
-        phone: '',
-        email: '',
-        website: ''
+        phone: normalizeText(property.contact?.phone),
+        email: normalizeText(property.contact?.email),
+        website: normalizeUrl(property.contact?.website)
       }
     };
-    
-    if (Object.values(property).some(val => val && val !== '')) {
-      extractedProperties.push(property);
-    }
-  }
-  
-  // Try to extract from article if still no properties
-  if (extractedProperties.length === 0 && data && data.article) {
-    console.log("No property listings found in product data, checking article data");
-    
-    const property: ExtractedProperty = {
-      name: normalizeText(data.article.headline),
-      description: normalizeText(data.article.description || data.article.text),
-      image: normalizeUrl(data.article.image),
-      contact: {
-        phone: '',
-        email: '',
-        website: ''
-      }
-    };
-    
-    if (Object.values(property).some(val => val && val !== '')) {
-      extractedProperties.push(property);
-    }
-  }
-  
-  // If we still have no properties but have some data, create a generic one
-  if (extractedProperties.length === 0 && data) {
-    console.log("Creating generic property from available data");
-    
-    // Create at least one generic property with whatever data we have
-    const property: ExtractedProperty = {
-      name: findValueInObject(data, ['name', 'title', 'heading']) || 'Extracted Property',
-      description: findValueInObject(data, ['description', 'content', 'text', 'summary']),
-      location: findValueInObject(data, ['location', 'address', 'place']),
-      price: findValueInObject(data, ['price', 'cost', 'value']),
-      image: findValueInObject(data, ['image', 'img', 'photo', 'picture']),
-      contact: {
-        phone: findValueInObject(data, ['contactPhone', 'phone', 'telephone']),
-        email: findValueInObject(data, ['contactEmail', 'email']),
-        website: findValueInObject(data, ['contactWebsite', 'website', 'url'])
-      }
-    };
-    
-    extractedProperties.push(property);
-  }
-  
-  return extractedProperties;
-}
-
-// Helper function to find a value in an object using multiple possible keys
-function findValueInObject(obj: any, possibleKeys: string[]): string | null {
-  if (!obj || typeof obj !== 'object') return null;
-  
-  for (const key of possibleKeys) {
-    if (obj[key] && typeof obj[key] === 'string' && obj[key].trim() !== '') {
-      return normalizeText(obj[key]);
-    }
-  }
-  
-  // If not found at the top level, search in nested objects (1 level deep only)
-  for (const prop in obj) {
-    if (obj[prop] && typeof obj[prop] === 'object') {
-      for (const key of possibleKeys) {
-        if (obj[prop][key] && typeof obj[prop][key] === 'string' && obj[prop][key].trim() !== '') {
-          return normalizeText(obj[prop][key]);
-        }
-      }
-    }
-  }
-  
-  return null;
+  });
 }
 
 // Helper functions to normalize data

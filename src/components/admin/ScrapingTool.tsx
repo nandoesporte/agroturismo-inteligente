@@ -9,7 +9,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
-import { Plus, Undo2, Check, X, ExternalLink, Phone, Mail, Info } from 'lucide-react';
+import { Plus, Undo2, Check, X, ExternalLink, Phone, Mail, Info, Sparkles } from 'lucide-react';
 import {
   Tooltip,
   TooltipContent,
@@ -53,7 +53,7 @@ export const ScrapingTool: React.FC<ScrapingToolProps> = ({ onImportProperty }) 
     if (!urlToScrape) {
       toast({
         title: "URL Inválida",
-        description: "Por favor, insira uma URL válida para raspar",
+        description: "Por favor, insira uma URL válida para extrair dados",
         variant: "destructive",
       });
       return;
@@ -66,8 +66,8 @@ export const ScrapingTool: React.FC<ScrapingToolProps> = ({ onImportProperty }) 
     
     try {
       toast({
-        title: "Iniciando raspagem de dados",
-        description: `Coletando dados de ${urlToScrape}`,
+        title: "Iniciando extração de dados com IA",
+        description: `Analisando dados de ${urlToScrape}`,
       });
 
       setProgress(30);
@@ -77,20 +77,20 @@ export const ScrapingTool: React.FC<ScrapingToolProps> = ({ onImportProperty }) 
       if (result.success && result.properties && result.properties.length > 0) {
         setScrapedProperties(result.properties);
         toast({
-          title: "Raspagem concluída",
+          title: "Extração com IA concluída",
           description: `Encontradas ${result.properties.length} propriedades`,
         });
       } else {
         toast({
           title: "Nenhum dado encontrado",
-          description: result.error || "Não foi possível encontrar dados de propriedades neste site",
+          description: result.error || "A IA não conseguiu extrair dados de propriedades neste site",
           variant: "destructive",
         });
       }
     } catch (error: any) {
       toast({
-        title: "Erro na raspagem",
-        description: error.message || "Ocorreu um erro ao raspar o site",
+        title: "Erro na extração",
+        description: error.message || "Ocorreu um erro ao extrair dados do site com IA",
         variant: "destructive",
       });
     } finally {
@@ -146,9 +146,9 @@ export const ScrapingTool: React.FC<ScrapingToolProps> = ({ onImportProperty }) 
   return (
     <Card className="w-full">
       <CardHeader>
-        <CardTitle>Ferramenta de Raspagem de Dados</CardTitle>
+        <CardTitle>Ferramenta de Extração de Dados com IA</CardTitle>
         <CardDescription>
-          Colete informações sobre propriedades de agroturismo de sites específicos
+          Use IA para extrair informações sobre propriedades de agroturismo de sites específicos
         </CardDescription>
       </CardHeader>
       <CardContent>
@@ -179,7 +179,13 @@ export const ScrapingTool: React.FC<ScrapingToolProps> = ({ onImportProperty }) 
               disabled={isLoading}
               className="w-full bg-nature-600 hover:bg-nature-700"
             >
-              {isLoading ? "Raspando Dados..." : "Raspar Site Selecionado"}
+              {isLoading ? (
+                "Analisando com IA..."
+              ) : (
+                <>
+                  <Sparkles className="h-4 w-4 mr-2" /> Extrair com IA
+                </>
+              )}
             </Button>
           </TabsContent>
           
@@ -201,7 +207,13 @@ export const ScrapingTool: React.FC<ScrapingToolProps> = ({ onImportProperty }) 
               disabled={isLoading || !customUrl}
               className="w-full bg-nature-600 hover:bg-nature-700"
             >
-              {isLoading ? "Raspando Dados..." : "Raspar URL Personalizada"}
+              {isLoading ? (
+                "Analisando com IA..."
+              ) : (
+                <>
+                  <Sparkles className="h-4 w-4 mr-2" /> Extrair com IA
+                </>
+              )}
             </Button>
           </TabsContent>
         </Tabs>

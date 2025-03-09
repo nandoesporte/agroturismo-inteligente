@@ -24,9 +24,8 @@ export class FirecrawlService {
     endpoint?: string;
   }> {
     try {
-      console.log('Making scrape request to Zyte Edge Function');
+      console.log('Making scrape request to Llama AI Edge Function');
       
-      // Update: Remove the timeout option as it's not supported in FunctionInvokeOptions
       const { data, error } = await supabase.functions.invoke('firecrawl', {
         body: { url }
       });
@@ -35,11 +34,11 @@ export class FirecrawlService {
         console.error('Scrape request failed:', error);
         return { 
           success: false, 
-          error: error.message || 'Failed to scrape website' 
+          error: error.message || 'Failed to extract data from website' 
         };
       }
 
-      console.log('Scrape successful using endpoint:', data.endpoint);
+      console.log('AI extraction successful using:', data.endpoint);
       console.log('Properties found:', data.properties?.length || 0);
       
       const properties = data.properties && data.properties.length > 0
@@ -58,10 +57,10 @@ export class FirecrawlService {
         endpoint: data.endpoint
       };
     } catch (error: any) {
-      console.error('Error during scraping:', error);
+      console.error('Error during AI extraction:', error);
       return { 
         success: false, 
-        error: error instanceof Error ? error.message : 'Failed to connect to scraping service' 
+        error: error instanceof Error ? error.message : 'Failed to connect to AI extraction service' 
       };
     }
   }
