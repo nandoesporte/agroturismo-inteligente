@@ -48,11 +48,11 @@ serve(async (req) => {
 
     console.log(`Scraping data from URL: ${url}`);
 
+    // Use the correct Zyte API endpoint
     // Primary and fallback endpoints
     const endpoints = [
-      "https://extraction.zyte.com/v1/extract",
       "https://api.zyte.com/v1/extract", 
-      "https://api.zyte.com/v2/extract"
+      "https://extraction.zyte.com/v1/extract"
     ];
     
     let zyteData = null;
