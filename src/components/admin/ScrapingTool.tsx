@@ -9,7 +9,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
-import { Plus, Undo2, Check, X, ExternalLink, Phone, Mail, Info, Sparkles } from 'lucide-react';
+import { Plus, Undo2, Check, X, ExternalLink, Phone, Mail, Info, Sparkles, Clock, Home } from 'lucide-react';
 import {
   Tooltip,
   TooltipContent,
@@ -128,6 +128,13 @@ export const ScrapingTool: React.FC<ScrapingToolProps> = ({ onImportProperty }) 
         price: property.price ? parseFloat(property.price.replace(/[^\d.,]/g, '')) || 0 : 0,
         image: property.image || '',
         tags: property.activities || [],
+        amenities: property.amenities || [],
+        hours: property.hours || '',
+        contact: {
+          phone: property.contact?.phone || '',
+          email: property.contact?.email || '',
+          website: property.contact?.website || ''
+        },
         is_featured: false
       };
       
@@ -266,20 +273,50 @@ export const ScrapingTool: React.FC<ScrapingToolProps> = ({ onImportProperty }) 
                       {property.description || "Sem descrição disponível"}
                     </p>
                     
-                    <div className="mt-2 flex flex-wrap gap-1">
-                      {property.activities && property.activities.length > 0 && (
-                        property.activities.map((activity, actIdx) => (
-                          <span 
-                            key={actIdx} 
-                            className="inline-block px-2 py-1 bg-nature-50 text-nature-700 rounded-full text-xs"
-                          >
-                            {activity}
-                          </span>
-                        ))
-                      )}
-                    </div>
+                    {/* Activities */}
+                    {property.activities && property.activities.length > 0 && (
+                      <div className="mt-2">
+                        <p className="text-xs font-medium text-muted-foreground mb-1">Atividades:</p>
+                        <div className="flex flex-wrap gap-1">
+                          {property.activities.map((activity, actIdx) => (
+                            <span 
+                              key={actIdx} 
+                              className="inline-block px-2 py-1 bg-nature-50 text-nature-700 rounded-full text-xs"
+                            >
+                              {activity}
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                    )}
                     
-                    <div className="mt-2 flex items-center gap-3 text-xs text-muted-foreground">
+                    {/* Amenities */}
+                    {property.amenities && property.amenities.length > 0 && (
+                      <div className="mt-2">
+                        <p className="text-xs font-medium text-muted-foreground mb-1">Comodidades:</p>
+                        <div className="flex flex-wrap gap-1">
+                          {property.amenities.map((amenity, amenIdx) => (
+                            <span 
+                              key={amenIdx} 
+                              className="inline-block px-2 py-1 bg-blue-50 text-blue-700 rounded-full text-xs"
+                            >
+                              {amenity}
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                    
+                    {/* Hours */}
+                    {property.hours && (
+                      <div className="mt-2 flex items-center gap-1 text-xs">
+                        <Clock size={12} className="text-muted-foreground" />
+                        <span className="text-muted-foreground">{property.hours}</span>
+                      </div>
+                    )}
+                    
+                    {/* Contact Information */}
+                    <div className="mt-2 flex items-center flex-wrap gap-3 text-xs text-muted-foreground">
                       {property.image && (
                         <TooltipProvider>
                           <Tooltip>

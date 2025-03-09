@@ -7,6 +7,8 @@ export type ExtractedProperty = {
   location?: string;
   price?: string;
   activities?: string[];
+  amenities?: string[];
+  hours?: string;
   contact?: {
     phone?: string;
     email?: string;
@@ -45,6 +47,7 @@ export class FirecrawlService {
         ? data.properties.map((property: ExtractedProperty) => ({
             ...property,
             activities: property.activities || [],
+            amenities: property.amenities || [],
             contact: property.contact || { phone: '', email: '', website: '' },
             price: property.price ? this.formatPrice(property.price) : ''
           }))

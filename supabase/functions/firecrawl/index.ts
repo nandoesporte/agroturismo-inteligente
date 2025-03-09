@@ -1,4 +1,3 @@
-
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 
 const corsHeaders = {
@@ -12,6 +11,8 @@ type ExtractedProperty = {
   location?: string;
   price?: string;
   activities?: string[];
+  amenities?: string[];
+  hours?: string;
   contact?: {
     phone?: string;
     email?: string;
@@ -83,8 +84,10 @@ serve(async (req) => {
         3. Location
         4. Price (if available)
         5. Activities or features (up to 5 items)
-        6. Contact information (phone, email, website - if available)
-        7. Image URL (if found)
+        6. Amenities (up to 5 items, like Wi-Fi, Parking, Breakfast, etc.)
+        7. Operating hours (like "Mon-Fri: 9AM-5PM, Sat-Sun: 10AM-4PM")
+        8. Contact information (phone, email, website - if available)
+        9. Image URL (if found)
         
         Format your response as a valid JSON array with properties in this exact structure:
         [
@@ -94,6 +97,8 @@ serve(async (req) => {
             "location": "Location details",
             "price": "Price information",
             "activities": ["activity1", "activity2"],
+            "amenities": ["amenity1", "amenity2"],
+            "hours": "Operating hours information",
             "contact": {
               "phone": "phone number",
               "email": "email address",
@@ -102,9 +107,6 @@ serve(async (req) => {
             "image": "image url"
           }
         ]
-        
-        Here is the HTML content:
-        ${truncatedContent}
         
         Only respond with the JSON. Do not include any explanations before or after the JSON.
       `;
@@ -249,6 +251,8 @@ function normalizeProperties(properties: any[]): ExtractedProperty[] {
       location: normalizeText(property.location),
       price: normalizeText(property.price),
       activities: normalizeArray(property.activities),
+      amenities: normalizeArray(property.amenities),
+      hours: normalizeText(property.hours),
       image: normalizeUrl(property.image),
       contact: {
         phone: normalizeText(property.contact?.phone),

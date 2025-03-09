@@ -23,7 +23,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Edit, Plus, Trash2, Image, Database } from 'lucide-react';
+import { Edit, Plus, Trash2, Image, Database, Phone, Mail, Clock, Home } from 'lucide-react';
 import { Checkbox } from '@/components/ui/checkbox';
 import { ScrapingTool } from '@/components/admin/ScrapingTool';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -37,6 +37,13 @@ interface Property {
   review_count: number;
   image: string;
   tags: string[];
+  amenities?: string[];
+  hours?: string;
+  contact?: {
+    phone?: string;
+    email?: string;
+    website?: string;
+  };
   is_featured: boolean;
   created_at: string;
   updated_at: string;
@@ -53,6 +60,11 @@ const AdminProperties = () => {
     price: '',
     image: '',
     tags: '',
+    amenities: '',
+    hours: '',
+    contact_phone: '',
+    contact_email: '',
+    contact_website: '',
     is_featured: false
   });
   const [activeTab, setActiveTab] = useState("properties");
@@ -100,6 +112,11 @@ const AdminProperties = () => {
       price: property.price.toString(),
       image: property.image || '',
       tags: property.tags ? property.tags.join(', ') : '',
+      amenities: property.amenities ? property.amenities.join(', ') : '',
+      hours: property.hours || '',
+      contact_phone: property.contact?.phone || '',
+      contact_email: property.contact?.email || '',
+      contact_website: property.contact?.website || '',
       is_featured: property.is_featured
     });
     setOpenDialog(true);
@@ -115,6 +132,13 @@ const AdminProperties = () => {
         price: parseFloat(formData.price),
         image: formData.image,
         tags: formData.tags.split(',').map(tag => tag.trim()).filter(tag => tag),
+        amenities: formData.amenities.split(',').map(amenity => amenity.trim()).filter(amenity => amenity),
+        hours: formData.hours,
+        contact: {
+          phone: formData.contact_phone,
+          email: formData.contact_email,
+          website: formData.contact_website
+        },
         is_featured: formData.is_featured
       };
 
@@ -191,6 +215,11 @@ const AdminProperties = () => {
       price: '',
       image: '',
       tags: '',
+      amenities: '',
+      hours: '',
+      contact_phone: '',
+      contact_email: '',
+      contact_website: '',
       is_featured: false
     });
   };
@@ -202,6 +231,11 @@ const AdminProperties = () => {
       price: property.price ? property.price.toString() : '',
       image: property.image || '',
       tags: Array.isArray(property.tags) ? property.tags.join(', ') : '',
+      amenities: Array.isArray(property.amenities) ? property.amenities.join(', ') : '',
+      hours: property.hours || '',
+      contact_phone: property.contact?.phone || '',
+      contact_email: property.contact?.email || '',
+      contact_website: property.contact?.website || '',
       is_featured: property.is_featured || false
     });
     setOpenDialog(true);
@@ -231,7 +265,7 @@ const AdminProperties = () => {
                 <Plus className="h-4 w-4 mr-2" /> Nova Propriedade
               </Button>
             </DialogTrigger>
-            <DialogContent className="sm:max-w-[600px]">
+            <DialogContent className="sm:max-w-[700px]">
               <DialogHeader>
                 <DialogTitle>{editingProperty ? 'Editar' : 'Adicionar'} Propriedade</DialogTitle>
                 <DialogDescription>
@@ -288,8 +322,8 @@ const AdminProperties = () => {
                         </Button>
                       </div>
                     </div>
-                    <div className="col-span-2">
-                      <Label htmlFor="tags">Tags (separadas por vírgula)</Label>
+                    <div className="col-span-1">
+                      <Label htmlFor="tags">Atividades (separadas por vírgula)</Label>
                       <Input
                         id="tags"
                         name="tags"
@@ -298,6 +332,77 @@ const AdminProperties = () => {
                         placeholder="Café Colonial, Trilhas, Pousada"
                       />
                     </div>
+                    <div className="col-span-1">
+                      <Label htmlFor="amenities">Comodidades (separadas por vírgula)</Label>
+                      <Input
+                        id="amenities"
+                        name="amenities"
+                        value={formData.amenities}
+                        onChange={handleInputChange}
+                        placeholder="Wi-Fi, Estacionamento, Café da manhã"
+                      />
+                    </div>
+                    <div className="col-span-2">
+                      <Label htmlFor="hours">Horário de Funcionamento</Label>
+                      <Input
+                        id="hours"
+                        name="hours"
+                        value={formData.hours}
+                        onChange={handleInputChange}
+                        placeholder="Seg-Sex: 9h às 17h, Sáb-Dom: 10h às 16h"
+                      />
+                    </div>
+                    
+                    {/* Contact Information */}
+                    <div className="col-span-2">
+                      <h3 className="text-sm font-medium mb-2">Informações de Contato</h3>
+                      <div className="grid grid-cols-3 gap-3">
+                        <div>
+                          <Label htmlFor="contact_phone">Telefone</Label>
+                          <div className="flex">
+                            <span className="inline-flex items-center px-3 rounded-l-md border border-r-0 border-input bg-muted text-muted-foreground">
+                              <Phone className="h-4 w-4" />
+                            </span>
+                            <Input
+                              id="contact_phone"
+                              name="contact_phone"
+                              value={formData.contact_phone}
+                              onChange={handleInputChange}
+                              className="rounded-l-none"
+                              placeholder="(42) 9999-9999"
+                            />
+                          </div>
+                        </div>
+                        <div>
+                          <Label htmlFor="contact_email">Email</Label>
+                          <div className="flex">
+                            <span className="inline-flex items-center px-3 rounded-l-md border border-r-0 border-input bg-muted text-muted-foreground">
+                              <Mail className="h-4 w-4" />
+                            </span>
+                            <Input
+                              id="contact_email"
+                              name="contact_email"
+                              type="email"
+                              value={formData.contact_email}
+                              onChange={handleInputChange}
+                              className="rounded-l-none"
+                              placeholder="contato@exemplo.com"
+                            />
+                          </div>
+                        </div>
+                        <div>
+                          <Label htmlFor="contact_website">Website</Label>
+                          <Input
+                            id="contact_website"
+                            name="contact_website"
+                            value={formData.contact_website}
+                            onChange={handleInputChange}
+                            placeholder="https://exemplo.com.br"
+                          />
+                        </div>
+                      </div>
+                    </div>
+                    
                     <div className="col-span-2 flex items-center space-x-2">
                       <Checkbox
                         id="is_featured"
