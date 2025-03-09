@@ -19,18 +19,38 @@ serve(async (req) => {
       throw new Error("Missing GROQ API key");
     }
 
-    // Parse the request body to get the image
-    const formData = await req.formData();
-    const imageFile = formData.get('image');
+    // Get the raw request body to avoid parsing issues
+    const contentType = req.headers.get("content-type") || "";
+    let imageBase64 = "";
     
-    if (!imageFile || !(imageFile instanceof File)) {
-      throw new Error("No valid image file provided");
+    if (contentType.includes("application/json")) {
+      // Handle JSON payload
+      const { image } = await req.json();
+      imageBase64 = image.replace(/^data:image\/[a-z]+;base64,/, "");
+    } else {
+      // Attempt to parse FormData
+      try {
+        const formData = await req.formData();
+        const imageFile = formData.get('image');
+        
+        if (!imageFile || !(imageFile instanceof File)) {
+          throw new Error("No valid image file provided");
+        }
+
+        // Convert image to base64
+        const imageBytes = await imageFile.arrayBuffer();
+        imageBase64 = btoa(String.fromCharCode(...new Uint8Array(imageBytes)));
+      } catch (formError) {
+        console.error("Form data parsing error:", formError.message);
+        throw new Error("Could not process the image data. Please try a different format or image.");
+      }
     }
 
-    // Convert image to base64 for sending to vision model
-    const imageBytes = await imageFile.arrayBuffer();
-    const base64Image = btoa(String.fromCharCode(...new Uint8Array(imageBytes)));
-    const dataUri = `data:${imageFile.type};base64,${base64Image}`;
+    if (!imageBase64) {
+      throw new Error("No image data was provided");
+    }
+
+    const dataUri = `data:image/jpeg;base64,${imageBase64}`;
 
     // First, use LLaVA or similar vision model to identify the species
     console.log("Sending image to vision model for species identification");

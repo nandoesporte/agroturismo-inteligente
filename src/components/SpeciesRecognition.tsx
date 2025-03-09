@@ -119,19 +119,14 @@ const SpeciesRecognition = () => {
     setSpeciesInfo(null);
     
     try {
-      // Convert data URL to blob
-      const fetchResponse = await fetch(capturedImage);
-      const blob = await fetchResponse.blob();
+      // Send the base64 image data directly to avoid form-data boundary issues
+      const imageBase64 = capturedImage.split(',')[1]; // Remove the data URL prefix
       
-      // Create form data
-      const formData = new FormData();
-      formData.append('image', blob, 'image.jpg');
-      
-      // Send to Supabase edge function
+      // Send to Supabase edge function with JSON payload
       const { data, error: functionError } = await supabase.functions.invoke('species-recognition', {
-        body: formData,
+        body: { image: capturedImage },
         headers: {
-          'Content-Type': 'multipart/form-data',
+          'Content-Type': 'application/json',
         },
       });
       
@@ -140,7 +135,7 @@ const SpeciesRecognition = () => {
         throw new Error(functionError.message || 'Erro ao processar imagem');
       }
       
-      if (data.error) {
+      if (data && data.error) {
         console.error('API error:', data.error, data.details);
         throw new Error(data.error);
       }
