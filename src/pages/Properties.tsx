@@ -161,11 +161,17 @@ const Properties = () => {
       <Navbar />
       
       <main className="flex-1">
-        {/* Header */}
-        <div className="bg-nature-50 py-12 md:py-16">
-          <div className="container max-w-7xl mx-auto px-4">
-            <h1 className="text-3xl md:text-4xl font-bold playfair mb-4">Propriedades Rurais</h1>
-            <p className="text-muted-foreground max-w-2xl">
+        {/* Header with dark agrotourism background */}
+        <div 
+          className="relative py-12 md:py-16 bg-cover bg-center bg-no-repeat"
+          style={{ 
+            backgroundImage: "url('https://images.unsplash.com/photo-1500382017468-9049fed747ef?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1932&q=80')"
+          }}
+        >
+          <div className="absolute inset-0 bg-black/60"></div>
+          <div className="container max-w-7xl mx-auto px-4 relative z-10">
+            <h1 className="text-3xl md:text-4xl font-bold playfair mb-4 text-white">Propriedades Rurais</h1>
+            <p className="text-gray-200 max-w-2xl">
               Descubra as melhores propriedades rurais do Paraná para sua próxima aventura. 
               Filtre por tipo de experiência, localização e muito mais.
             </p>
