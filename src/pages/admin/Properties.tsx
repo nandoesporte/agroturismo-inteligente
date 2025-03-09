@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useRef } from 'react';
 import { supabase } from '@/lib/supabase';
 import { useToast } from '@/hooks/use-toast';
@@ -25,7 +26,7 @@ import {
 import { 
   Edit, Plus, Trash2, Image, Database, Phone, 
   Mail, Clock, Home, Download, Loader2, FileSpreadsheet,
-  MessageCircle, Upload, X
+  MessageCircle, Upload, X, Save
 } from 'lucide-react';
 import { Checkbox } from '@/components/ui/checkbox';
 import { ScrapingTool } from '@/components/admin/ScrapingTool';
@@ -42,6 +43,15 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { Property } from '@/components/PropertyCard';
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Progress } from "@/components/ui/progress";
 
 const AdminProperties = () => {
   const [properties, setProperties] = useState<Property[]>([]);
@@ -71,10 +81,23 @@ const AdminProperties = () => {
   const [imageUploadLoading, setImageUploadLoading] = useState(false);
   const [imageFiles, setImageFiles] = useState<File[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  
+  // Batch import state
+  const [batchProperties, setBatchProperties] = useState<any[]>([]);
+  const [batchSaveOpen, setBatchSaveOpen] = useState(false);
+  const [batchSaveInProgress, setBatchSaveInProgress] = useState(false);
+  const [batchSaveProgress, setBatchSaveProgress] = useState(0);
+  const [currentSaveIndex, setCurrentSaveIndex] = useState(0);
 
   useEffect(() => {
     fetchProperties();
   }, []);
+
+  useEffect(() => {
+    if (batchProperties.length > 0) {
+      setBatchSaveOpen(true);
+    }
+  }, [batchProperties]);
 
   const fetchProperties = async () => {
     setLoading(true);
@@ -371,6 +394,70 @@ const AdminProperties = () => {
     setOpenDialog(true);
   };
 
+  const handleBatchImport = (properties: any[]) => {
+    setBatchProperties(properties);
+  };
+
+  const saveBatchProperties = async () => {
+    if (batchProperties.length === 0) {
+      toast({
+        title: "Nenhuma propriedade para salvar",
+        description: "Não há propriedades para salvar em lote",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setBatchSaveInProgress(true);
+    setCurrentSaveIndex(0);
+    
+    try {
+      const formattedProperties = batchProperties.map(property => ({
+        name: property.name.trim(),
+        location: property.location.trim(),
+        price: typeof property.price === 'number' ? property.price : 0,
+        image: property.image?.trim() || '',
+        images: property.images || [],
+        tags: Array.isArray(property.tags) ? property.tags : [],
+        amenities: Array.isArray(property.amenities) ? property.amenities : [],
+        hours: property.hours?.trim() || '',
+        contact: {
+          phone: property.contact?.phone?.trim() || '',
+          email: property.contact?.email?.trim() || '',
+          website: property.contact?.website?.trim() || '',
+          whatsapp: property.contact?.whatsapp?.trim() || ''
+        },
+        is_featured: property.is_featured || false
+      }));
+      
+      // Inserir todas as propriedades de uma vez usando a API do Supabase
+      const { data, error } = await supabase
+        .from('properties')
+        .insert(formattedProperties)
+        .select();
+      
+      if (error) throw error;
+      
+      toast({
+        title: "Propriedades salvas com sucesso",
+        description: `${formattedProperties.length} propriedades foram salvas no banco de dados`,
+      });
+      
+      fetchProperties();
+      setBatchProperties([]);
+      setBatchSaveOpen(false);
+    } catch (error: any) {
+      console.error('Erro ao salvar propriedades em lote:', error);
+      toast({
+        title: "Erro ao salvar propriedades",
+        description: error.message,
+        variant: "destructive",
+      });
+    } finally {
+      setBatchSaveInProgress(false);
+    }
+  };
+
   const normalizePrice = (priceStr: string): number => {
     if (!priceStr || priceStr === 'Não informado' || priceStr === 'Sob consulta') {
       return 0;
@@ -615,6 +702,82 @@ const AdminProperties = () => {
 
   return (
     <div className="p-4 md:p-6">
+      {/* Batch Save Dialog */}
+      <Dialog open={batchSaveOpen} onOpenChange={setBatchSaveOpen}>
+        <DialogContent className="sm:max-w-[600px]">
+          <DialogHeader>
+            <DialogTitle>Salvar Propriedades em Lote</DialogTitle>
+            <DialogDescription>
+              {batchProperties.length} propriedades serão salvas no banco de dados.
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="py-4">
+            <Card className="border-dashed">
+              <CardHeader className="pb-3">
+                <CardTitle className="text-sm font-medium">Propriedades a serem salvas</CardTitle>
+              </CardHeader>
+              <CardContent className="max-h-[300px] overflow-y-auto">
+                <div className="space-y-3">
+                  {batchProperties.map((property, index) => (
+                    <div key={index} className="p-2 border rounded">
+                      <div className="font-medium">{property.name}</div>
+                      <div className="text-sm text-muted-foreground">{property.location}</div>
+                      {property.tags && property.tags.length > 0 && (
+                        <div className="flex flex-wrap gap-1 mt-1">
+                          {property.tags.map((tag: string, i: number) => (
+                            <span key={i} className="inline-block px-2 py-0.5 bg-nature-50 text-nature-700 rounded-full text-xs">
+                              {tag}
+                            </span>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+            
+            {batchSaveInProgress && (
+              <div className="mt-4 space-y-2">
+                <div className="flex items-center justify-between mb-1">
+                  <span className="text-sm font-medium">Salvando propriedades</span>
+                </div>
+                <Progress value={batchSaveProgress} className="w-full" />
+              </div>
+            )}
+          </div>
+          
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setBatchProperties([]);
+                setBatchSaveOpen(false);
+              }}
+              disabled={batchSaveInProgress}
+            >
+              Cancelar
+            </Button>
+            <Button
+              onClick={saveBatchProperties}
+              disabled={batchSaveInProgress}
+              className="bg-nature-600 hover:bg-nature-700"
+            >
+              {batchSaveInProgress ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" /> Salvando...
+                </>
+              ) : (
+                <>
+                  <Save className="h-4 w-4 mr-2" /> Salvar {batchProperties.length} Propriedades
+                </>
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+      
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
         <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center mb-6 space-y-4 sm:space-y-0">
           <div>
@@ -1023,7 +1186,10 @@ const AdminProperties = () => {
         
         <TabsContent value="scraping">
           <div className="bg-white rounded-md shadow p-4 md:p-6">
-            <ScrapingTool onImportProperty={handleImportProperty} />
+            <ScrapingTool 
+              onImportProperty={handleImportProperty} 
+              onBatchImport={handleBatchImport}
+            />
           </div>
         </TabsContent>
       </Tabs>

@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
@@ -8,7 +9,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
-import { Plus, Undo2, Check, X, ExternalLink, Phone, Mail, Info, Sparkles, Clock, Home, Tag, AlertTriangle, FileCheck } from 'lucide-react';
+import { Plus, Undo2, Check, X, ExternalLink, Phone, Mail, Info, Sparkles, Clock, Home, Tag, AlertTriangle, FileCheck, Save } from 'lucide-react';
 import {
   Tooltip,
   TooltipContent,
@@ -46,9 +47,10 @@ const propertyCategories = [
 
 interface ScrapingToolProps {
   onImportProperty: (property: any) => void;
+  onBatchImport: (properties: any[]) => void;
 }
 
-export const ScrapingTool: React.FC<ScrapingToolProps> = ({ onImportProperty }) => {
+export const ScrapingTool: React.FC<ScrapingToolProps> = ({ onImportProperty, onBatchImport }) => {
   const { toast } = useToast();
   const [customUrl, setCustomUrl] = useState('');
   const [selectedUrl, setSelectedUrl] = useState(predefinedUrls[0].url);
@@ -66,6 +68,7 @@ export const ScrapingTool: React.FC<ScrapingToolProps> = ({ onImportProperty }) 
   const [importingSelectedInProgress, setImportingSelectedInProgress] = useState(false);
   const [currentImportIndex, setCurrentImportIndex] = useState(0);
   const [totalToImport, setTotalToImport] = useState(0);
+  const [batchSaveInProgress, setBatchSaveInProgress] = useState(false);
 
   useEffect(() => {
     fetchExistingProperties();
@@ -196,45 +199,65 @@ export const ScrapingTool: React.FC<ScrapingToolProps> = ({ onImportProperty }) 
     setTotalToImport(selectedItems.length);
     setCurrentImportIndex(0);
     
-    for (let i = 0; i < selectedItems.length; i++) {
-      setCurrentImportIndex(i + 1);
-      const property = selectedItems[i];
-      
-      const formattedProperty = {
-        name: property.name || '',
-        location: property.location || '',
-        price: property.price ? parseFloat(property.price.replace(/[^\d.,]/g, '').replace(',', '.')) || 0 : 0,
-        image: property.image || '',
-        images: property.images || [],
-        tags: property.activities || [],
-        amenities: property.amenities || [],
-        hours: property.hours || '',
-        contact: {
-          phone: property.contact?.phone || '',
-          email: property.contact?.email || '',
-          website: property.contact?.website || ''
-        },
-        type: property.type || '',
-        is_featured: false
-      };
-      
-      onImportProperty(formattedProperty);
-      
-      if (i < selectedItems.length - 1) {
-        await new Promise(resolve => setTimeout(resolve, 300));
-      }
-    }
+    // Format properties for import
+    const formattedProperties = selectedItems.map(property => ({
+      name: property.name || '',
+      location: property.location || '',
+      price: property.price ? parseFloat(property.price.replace(/[^\d.,]/g, '').replace(',', '.')) || 0 : 0,
+      image: property.image || '',
+      images: property.images || [],
+      tags: property.activities || [],
+      amenities: property.amenities || [],
+      hours: property.hours || '',
+      contact: {
+        phone: property.contact?.phone || '',
+        email: property.contact?.email || '',
+        website: property.contact?.website || ''
+      },
+      type: property.type || '',
+      is_featured: false
+    }));
+    
+    // Use the batch import handler
+    onBatchImport(formattedProperties);
     
     await fetchExistingProperties();
     
     toast({
       title: "Propriedades importadas",
-      description: `${selectedItems.length} propriedades foram importadas para o sistema`,
+      description: `${selectedItems.length} propriedades foram importadas para serem salvas em lote`,
     });
     
     setSelectedProperties({});
     setSelectAll(false);
     setImportingSelectedInProgress(false);
+  };
+
+  const handleSingleImport = (property: ExtractedProperty) => {
+    const formattedProperty = {
+      name: property.name || '',
+      location: property.location || '',
+      price: property.price ? parseFloat(property.price.replace(/[^\d.,]/g, '').replace(',', '.')) || 0 : 0,
+      image: property.image || '',
+      images: property.images || [],
+      tags: property.activities || [],
+      amenities: property.amenities || [],
+      hours: property.hours || '',
+      contact: {
+        phone: property.contact?.phone || '',
+        email: property.contact?.email || '',
+        website: property.contact?.website || ''
+      },
+      type: property.type || '',
+      is_featured: false
+    };
+    
+    onImportProperty(formattedProperty);
+    
+    toast({
+      title: "Propriedade importada",
+      description: "A propriedade foi importada para o formulário",
+    });
   };
 
   const handleBulkScrape = async () => {
@@ -445,7 +468,7 @@ export const ScrapingTool: React.FC<ScrapingToolProps> = ({ onImportProperty }) 
                     </>
                   ) : (
                     <>
-                      <Plus className="h-4 w-4 mr-1" /> 
+                      <Save className="h-4 w-4 mr-1" /> 
                       Importar Todas Selecionadas
                     </>
                   )}
@@ -625,6 +648,17 @@ export const ScrapingTool: React.FC<ScrapingToolProps> = ({ onImportProperty }) 
                               </Tooltip>
                             </TooltipProvider>
                           )}
+                        </div>
+                        
+                        <div className="mt-3 flex items-center gap-2">
+                          <Button 
+                            size="sm" 
+                            variant="outline" 
+                            className="text-xs"
+                            onClick={() => handleSingleImport(property)}
+                          >
+                            <Plus className="h-3.5 w-3.5 mr-1" /> Importar esta propriedade
+                          </Button>
                         </div>
                       </div>
                     </div>
