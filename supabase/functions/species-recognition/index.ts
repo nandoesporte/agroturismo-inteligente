@@ -68,28 +68,33 @@ serve(async (req) => {
     console.log("Image data prepared for processing, length:", imageBase64.length);
     const dataUri = `data:image/jpeg;base64,${imageBase64}`;
 
-    // Step 1: Use Claude model for image analysis and species identification
-    console.log("Sending image to GROQ for species identification");
-    const visionResponse = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+    // Use the Google Gemini Pro Vision model via API
+    console.log("Sending image to Google Gemini API for species identification");
+    const visionResponse = await fetch("https://generativelanguage.googleapis.com/v1beta/models/gemini-pro-vision:generateContent?key=" + Deno.env.get('GOOGLE_API_KEY'), {
       method: "POST",
       headers: {
-        "Authorization": `Bearer ${GROQ_API_KEY}`,
         "Content-Type": "application/json"
       },
       body: JSON.stringify({
-        model: "llama3-70b-8192",  // Changed to an available text model
-        messages: [
+        contents: [
           {
-            role: "system", 
-            content: "Você é um biólogo especialista em identificação de espécies. Sua tarefa é identificar a espécie descrita pelo usuário com a maior precisão possível. Forneça APENAS o nome científico e o nome popular em sua resposta. Não inclua nenhuma informação ou explicação adicional."
-          },
-          {
-            role: "user",
-            content: `Identifique esta espécie o melhor que puder baseado nesta descrição: Uma planta ou animal que foi fotografado pelo usuário para identificação. Forneça apenas o nome científico e o nome popular.`
+            parts: [
+              {
+                text: "Você é um biólogo especialista em identificação de espécies. Analise esta imagem e identifique a espécie com a maior precisão possível. Forneça APENAS o nome científico (em itálico) e o nome popular em português do Brasil. Responda no formato 'Nome científico (Nome popular)'. Se não conseguir identificar com certeza, indique a família ou gênero mais provável."
+              },
+              {
+                inline_data: {
+                  mime_type: "image/jpeg",
+                  data: imageBase64
+                }
+              }
+            ]
           }
         ],
-        temperature: 0.2,
-        max_tokens: 150
+        generationConfig: {
+          temperature: 0.2,
+          maxOutputTokens: 150,
+        }
       })
     });
 
@@ -100,8 +105,17 @@ serve(async (req) => {
     }
 
     const visionData = await visionResponse.json();
-    const speciesIdentification = visionData.choices[0].message.content;
-    console.log("Initial identification received:", speciesIdentification);
+    console.log("Vision API response:", JSON.stringify(visionData));
+    
+    // Extract the species identification from the response
+    let speciesIdentification = "";
+    try {
+      speciesIdentification = visionData.candidates[0].content.parts[0].text.trim();
+      console.log("Species identified:", speciesIdentification);
+    } catch (error) {
+      console.error("Error extracting species identification:", error);
+      speciesIdentification = "Espécie não identificada. Por favor, tente com uma imagem mais clara.";
+    }
 
     // Step 2: Generate detailed description using llama3-8b-8192
     console.log("Generating detailed description using llama3-8b-8192");
@@ -124,8 +138,7 @@ serve(async (req) => {
           }
         ],
         temperature: 0.7,
-        max_tokens:
-        1024
+        max_tokens: 1024
       })
     });
 
