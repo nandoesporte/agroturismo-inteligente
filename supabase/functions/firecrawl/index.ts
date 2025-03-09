@@ -52,13 +52,13 @@ serve(async (req) => {
 
     console.log(`Extracting data from URL: ${url}`);
 
-    // First, fetch the HTML content of the website
+    // First, fetch the HTML content of the website with better error handling
     try {
       console.log(`Fetching content from URL: ${url}`);
       
       // Add timeout and better error handling for fetch
       const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 15000); // 15 second timeout
+      const timeoutId = setTimeout(() => controller.abort(), 20000); // 20 second timeout - increased from 15
       
       const fetchResponse = await fetch(url, {
         signal: controller.signal,
@@ -84,8 +84,8 @@ serve(async (req) => {
       const mainContent = extractMainContent(htmlContent);
       
       // Truncate content to stay within token limits
-      const truncatedContent = mainContent.length > 15000 
-        ? mainContent.substring(0, 15000) + "..." 
+      const truncatedContent = mainContent.length > 12000 
+        ? mainContent.substring(0, 12000) + "..." 
         : mainContent;
       
       console.log(`Reduced content to ${truncatedContent.length} bytes`);
@@ -133,10 +133,9 @@ serve(async (req) => {
       
       console.log("Sending request to GROQ API for extraction");
       
-      // Make the request to the Groq API with Llama model
-      // Add timeouts and better error handling
+      // Make the request to the Groq API with Llama model - with better error handling
       const groqController = new AbortController();
-      const groqTimeoutId = setTimeout(() => groqController.abort(), 60000); // 60 second timeout
+      const groqTimeoutId = setTimeout(() => groqController.abort(), 90000); // 90 second timeout - increased from 60
       
       try {
         const groqResponse = await fetch("https://api.groq.com/openai/v1/chat/completions", {
@@ -170,19 +169,59 @@ serve(async (req) => {
         let extractedProperties: ExtractedProperty[] = [];
         
         try {
-          // Extract the JSON part from the AI response
+          // Extract the JSON part from the AI response with more robust parsing
           const responseContent = aiData.choices[0].message.content;
           
-          // Look for JSON in the response (it might have text around it)
-          const jsonMatch = responseContent.match(/\[[\s\S]*\]/);
+          // More robust JSON extraction using different patterns
+          let jsonText = '';
           
+          // Try different extraction methods
+          // Method 1: Look for a JSON array pattern
+          const jsonMatch = responseContent.match(/\[\s*\{[\s\S]*\}\s*\]/);
           if (jsonMatch) {
-            extractedProperties = JSON.parse(jsonMatch[0]);
-            console.log(`Successfully parsed ${extractedProperties.length} properties from AI response`);
+            jsonText = jsonMatch[0];
+          } 
+          // Method 2: Look for content between triple backticks
+          else {
+            const codeBlockMatch = responseContent.match(/```(?:json)?\s*([\s\S]*?)```/);
+            if (codeBlockMatch && codeBlockMatch[1]) {
+              jsonText = codeBlockMatch[1];
+            } else {
+              // Method 3: Use the entire content if it looks like JSON
+              if (responseContent.trim().startsWith('[') && responseContent.trim().endsWith(']')) {
+                jsonText = responseContent;
+              }
+            }
+          }
+          
+          if (jsonText) {
+            try {
+              extractedProperties = JSON.parse(jsonText);
+              console.log(`Successfully parsed ${extractedProperties.length} properties from AI response`);
+            } catch (parseError) {
+              console.error(`Error parsing extracted JSON: ${parseError.message}`);
+              // Try to clean the JSON before parsing
+              const cleanedJson = jsonText
+                .replace(/\\'/g, "'")
+                .replace(/\\"/g, '"')
+                .replace(/\\&/g, '&')
+                .replace(/\\r/g, '')
+                .replace(/\\n/g, '')
+                .replace(/\\t/g, '')
+                .replace(/\s+/g, ' ')
+                .trim();
+              
+              try {
+                extractedProperties = JSON.parse(cleanedJson);
+                console.log(`Successfully parsed ${extractedProperties.length} properties after cleaning JSON`);
+              } catch (cleanParseError) {
+                console.error(`Error parsing cleaned JSON: ${cleanParseError.message}`);
+                throw new Error("Failed to parse AI response as JSON");
+              }
+            }
           } else {
-            console.log("No JSON array found in AI response, attempting to parse entire response");
-            // If no clear JSON array is found, try to parse the whole response
-            extractedProperties = JSON.parse(responseContent);
+            console.error("No JSON pattern found in the AI response");
+            throw new Error("No valid JSON found in AI response");
           }
         } catch (parseError) {
           console.error(`Error parsing AI response: ${parseError.message}`);
@@ -254,7 +293,7 @@ serve(async (req) => {
           return new Response(
             JSON.stringify({ 
               success: false, 
-              error: "GROQ API request timed out after 60 seconds" 
+              error: "GROQ API request timed out after 90 seconds" 
             }),
             { 
               status: 504, 
@@ -341,30 +380,42 @@ function extractMainContent(html: string): string {
   }
   
   // Return a shortened version of the cleaned HTML
-  return cleanedHtml.length > 30000 ? cleanedHtml.substring(0, 30000) : cleanedHtml;
+  return cleanedHtml.length > 20000 ? cleanedHtml.substring(0, 20000) : cleanedHtml;
 }
 
 // Helper function to normalize the extracted properties
 function normalizeProperties(properties: any[]): ExtractedProperty[] {
+  if (!Array.isArray(properties)) {
+    console.error("Properties is not an array:", properties);
+    return [];
+  }
+  
   return properties.map(property => {
-    return {
-      name: normalizeText(property.name),
-      description: normalizeText(property.description),
-      location: normalizeText(property.location),
-      price: normalizeText(property.price),
-      activities: normalizeArray(property.activities),
-      amenities: normalizeArray(property.amenities),
-      hours: normalizeText(property.hours),
-      image: normalizeUrl(property.image),
-      images: Array.isArray(property.images) ? property.images.map(normalizeUrl) : [],
-      type: normalizeText(property.type),
-      contact: {
-        phone: normalizeText(property.contact?.phone),
-        email: normalizeText(property.contact?.email),
-        website: normalizeUrl(property.contact?.website)
-      }
-    };
-  });
+    if (!property) return {};
+    
+    try {
+      return {
+        name: normalizeText(property.name),
+        description: normalizeText(property.description),
+        location: normalizeText(property.location),
+        price: normalizeText(property.price),
+        activities: normalizeArray(property.activities),
+        amenities: normalizeArray(property.amenities),
+        hours: normalizeText(property.hours),
+        image: normalizeUrl(property.image),
+        images: Array.isArray(property.images) ? property.images.map(normalizeUrl) : [],
+        type: normalizeText(property.type),
+        contact: {
+          phone: normalizeText(property.contact?.phone),
+          email: normalizeText(property.contact?.email),
+          website: normalizeUrl(property.contact?.website)
+        }
+      };
+    } catch (e) {
+      console.error("Error normalizing property:", e);
+      return {};
+    }
+  }).filter(p => Object.keys(p).length > 0);
 }
 
 // Helper functions to normalize data
