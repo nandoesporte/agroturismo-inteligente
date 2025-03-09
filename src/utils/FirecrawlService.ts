@@ -63,7 +63,7 @@ export class FirecrawlService {
         try {
           // Set a reasonable timeout for the entire operation
           const timeoutPromise = new Promise<never>((_, reject) => {
-            setTimeout(() => reject(new Error('Operation timed out after 30 seconds')), 30000);
+            setTimeout(() => reject(new Error('Operation timed out after 60 seconds')), 60000);
           });
           
           // Call the Supabase Edge Function with timeout
@@ -98,7 +98,7 @@ export class FirecrawlService {
           
           // Process properties, ensuring they have types assigned and are valid
           const properties = (data.properties || [])
-            .filter((property: any) => property && typeof property === 'object')
+            .filter((property: any) => property && typeof property === 'object' && property.name)
             .map((property: ExtractedProperty) => {
               if (!property.type) {
                 property.type = categorizeProperty(property);

@@ -35,14 +35,16 @@ serve(async (req) => {
     const GROQ_API_KEY = Deno.env.get("GROQ_API_KEY");
     
     if (!GROQ_API_KEY) {
+      console.error("Missing GROQ API key in environment variables");
       throw new Error("Missing GROQ API key");
     }
 
     const { url } = await req.json();
     
     if (!url) {
+      console.error("URL is required but was not provided");
       return new Response(
-        JSON.stringify({ error: "URL is required" }),
+        JSON.stringify({ success: false, error: "URL is required" }),
         { 
           status: 400, 
           headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
@@ -58,15 +60,20 @@ serve(async (req) => {
       
       // Add timeout and better error handling for fetch
       const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 20000); // 20 second timeout - increased from 15
+      const timeoutId = setTimeout(() => controller.abort(), 25000); // 25 second timeout - increased
       
       const fetchResponse = await fetch(url, {
         signal: controller.signal,
         headers: {
-          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
+          'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/115.0.0.0 Safari/537.36',
+          'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8',
+          'Accept-Language': 'en-US,en;q=0.9',
+          'Cache-Control': 'no-cache',
+          'Pragma': 'no-cache'
         }
       }).catch(error => {
         console.error(`Fetch error: ${error.message}`);
+        clearTimeout(timeoutId);
         throw new Error(`Failed to fetch website content: ${error.message}`);
       });
       
@@ -83,9 +90,9 @@ serve(async (req) => {
       // Extract only the main content to reduce token usage
       const mainContent = extractMainContent(htmlContent);
       
-      // Truncate content to stay within token limits
-      const truncatedContent = mainContent.length > 12000 
-        ? mainContent.substring(0, 12000) + "..." 
+      // Truncate content to stay within token limits - reducing even further to avoid overloading the model
+      const truncatedContent = mainContent.length > 10000 
+        ? mainContent.substring(0, 10000) + "..." 
         : mainContent;
       
       console.log(`Reduced content to ${truncatedContent.length} bytes`);
@@ -94,7 +101,7 @@ serve(async (req) => {
       const prompt = `
         Você é um especialista em extração de dados especializado em propriedades de hospedagem e turismo rural no Paraná, Brasil. Sua tarefa é extrair informações de propriedades a partir do conteúdo HTML fornecido.
         
-        Extraia até 20 propriedades/hospedagens que você encontrar. Para cada uma, forneça APENAS os seguintes campos:
+        Extraia até 10 propriedades/hospedagens que você encontrar. Para cada uma, forneça APENAS os seguintes campos:
         1. Nome (string): Nome da propriedade/pousada/hotel
         2. Localização (string): Localização da propriedade, preferencialmente no Paraná
         3. Preço (string): Informação de preço exatamente como aparece (com símbolo de moeda)
@@ -108,7 +115,7 @@ serve(async (req) => {
            - Email (string): Endereço de e-mail
            - Website (string): URL do site
 
-        Extraia até 20 propriedades, não menos. Formate sua resposta como um JSON válido com exatamente esses nomes de campos:
+        Formate sua resposta como um JSON válido com exatamente esses nomes de campos:
         [
           {
             "name": "Nome da Propriedade",
@@ -135,7 +142,7 @@ serve(async (req) => {
       
       // Make the request to the Groq API with Llama model - with better error handling
       const groqController = new AbortController();
-      const groqTimeoutId = setTimeout(() => groqController.abort(), 90000); // 90 second timeout - increased from 60
+      const groqTimeoutId = setTimeout(() => groqController.abort(), 100000); // 100 second timeout - increased
       
       try {
         const groqResponse = await fetch("https://api.groq.com/openai/v1/chat/completions", {
@@ -160,7 +167,7 @@ serve(async (req) => {
         if (!groqResponse.ok) {
           const errorData = await groqResponse.text();
           console.error(`GROQ API error (${groqResponse.status}): ${errorData}`);
-          throw new Error(`GROQ API error: ${groqResponse.status} - ${errorData}`);
+          throw new Error(`GROQ API error: ${groqResponse.status} - ${errorData.substring(0, 200)}`);
         }
 
         const aiData = await groqResponse.json();
@@ -171,6 +178,7 @@ serve(async (req) => {
         try {
           // Extract the JSON part from the AI response with more robust parsing
           const responseContent = aiData.choices[0].message.content;
+          console.log(`Raw AI response: ${responseContent.substring(0, 200)}...`);
           
           // More robust JSON extraction using different patterns
           let jsonText = '';
@@ -180,16 +188,19 @@ serve(async (req) => {
           const jsonMatch = responseContent.match(/\[\s*\{[\s\S]*\}\s*\]/);
           if (jsonMatch) {
             jsonText = jsonMatch[0];
+            console.log("Extracted JSON using array pattern match");
           } 
           // Method 2: Look for content between triple backticks
           else {
             const codeBlockMatch = responseContent.match(/```(?:json)?\s*([\s\S]*?)```/);
             if (codeBlockMatch && codeBlockMatch[1]) {
               jsonText = codeBlockMatch[1];
+              console.log("Extracted JSON using code block pattern match");
             } else {
               // Method 3: Use the entire content if it looks like JSON
               if (responseContent.trim().startsWith('[') && responseContent.trim().endsWith(']')) {
                 jsonText = responseContent;
+                console.log("Using entire response as JSON");
               }
             }
           }
@@ -200,6 +211,8 @@ serve(async (req) => {
               console.log(`Successfully parsed ${extractedProperties.length} properties from AI response`);
             } catch (parseError) {
               console.error(`Error parsing extracted JSON: ${parseError.message}`);
+              console.log(`Problematic JSON text: ${jsonText.substring(0, 100)}...`);
+              
               // Try to clean the JSON before parsing
               const cleanedJson = jsonText
                 .replace(/\\'/g, "'")
@@ -216,7 +229,30 @@ serve(async (req) => {
                 console.log(`Successfully parsed ${extractedProperties.length} properties after cleaning JSON`);
               } catch (cleanParseError) {
                 console.error(`Error parsing cleaned JSON: ${cleanParseError.message}`);
-                throw new Error("Failed to parse AI response as JSON");
+                console.log(`Cleaned JSON: ${cleanedJson.substring(0, 100)}...`);
+                
+                // Try parsing individual objects
+                try {
+                  const objectPattern = /\{[^{}]*(?:\{[^{}]*\}[^{}]*)*\}/g;
+                  const matches = cleanedJson.match(objectPattern) || [];
+                  console.log(`Found ${matches.length} potential JSON objects`);
+                  
+                  extractedProperties = matches
+                    .map(objStr => {
+                      try {
+                        return JSON.parse(objStr);
+                      } catch (e) {
+                        console.error(`Failed to parse object: ${objStr.substring(0, 50)}...`);
+                        return null;
+                      }
+                    })
+                    .filter(Boolean) as ExtractedProperty[];
+                  
+                  console.log(`Successfully parsed ${extractedProperties.length} individual objects`);
+                } catch (objectParseError) {
+                  console.error(`Error parsing individual objects: ${objectParseError.message}`);
+                  throw new Error("Failed to parse AI response as JSON");
+                }
               }
             }
           } else {
@@ -225,14 +261,13 @@ serve(async (req) => {
           }
         } catch (parseError) {
           console.error(`Error parsing AI response: ${parseError.message}`);
-          console.log("AI response content:", aiData.choices[0].message.content);
           
           // Create fallback properties if parsing fails
           // Use a more robust fallback strategy
           try {
             // Try to extract any JSON objects from the response
             const content = aiData.choices[0].message.content;
-            const jsonObjects = content.match(/\{[^{}]*\}/g);
+            const jsonObjects = content.match(/\{[^{}]*(?:\{[^{}]*\}[^{}]*)*\}/g);
             
             if (jsonObjects && jsonObjects.length > 0) {
               // Try to extract individual properties
@@ -242,7 +277,7 @@ serve(async (req) => {
                 } catch (e) {
                   return null;
                 }
-              }).filter(Boolean);
+              }).filter(Boolean) as ExtractedProperty[];
               
               console.log(`Extracted ${extractedProperties.length} properties using fallback method`);
             }
@@ -257,6 +292,7 @@ serve(async (req) => {
                   website: url
                 }
               }];
+              console.log("Created generic fallback property due to parsing issues");
             }
           } catch (fallbackError) {
             console.error(`Fallback parsing also failed: ${fallbackError.message}`);
@@ -268,11 +304,13 @@ serve(async (req) => {
                 website: url
               }
             }];
+            console.log("Created generic fallback property due to complete parsing failure");
           }
         }
         
         // Normalize the extracted properties
         const normalizedProperties = normalizeProperties(extractedProperties);
+        console.log(`Returning ${normalizedProperties.length} normalized properties`);
 
         return new Response(
           JSON.stringify({ 
@@ -293,7 +331,7 @@ serve(async (req) => {
           return new Response(
             JSON.stringify({ 
               success: false, 
-              error: "GROQ API request timed out after 90 seconds" 
+              error: "GROQ API request timed out after 100 seconds" 
             }),
             { 
               status: 504, 
@@ -344,43 +382,56 @@ serve(async (req) => {
 
 // Helper function to extract main content from HTML to reduce token usage
 function extractMainContent(html: string): string {
-  // Focus on product listings and accommodations
-  const accommodationRegexes = [
-    /<div[^>]*class="[^"]*accommodation-list[^"]*"[^>]*>([\s\S]*?)<\/div>/i,
-    /<div[^>]*class="[^"]*hotel-list[^"]*"[^>]*>([\s\S]*?)<\/div>/i,
-    /<div[^>]*class="[^"]*property-list[^"]*"[^>]*>([\s\S]*?)<\/div>/i,
-    /<div[^>]*class="[^"]*search-results[^"]*"[^>]*>([\s\S]*?)<\/div>/i,
-    /<main[^>]*>([\s\S]*?)<\/main>/i,
-    /<article[^>]*>([\s\S]*?)<\/article>/i,
-    /<section[^>]*>([\s\S]*?)<\/section>/i,
-    /<div[^>]*class="[^"]*content[^"]*"[^>]*>([\s\S]*?)<\/div>/i,
-    /<div[^>]*class="[^"]*container[^"]*"[^>]*>([\s\S]*?)<\/div>/i,
-  ];
-  
-  // Try each regex pattern to find the main content
-  for (const regex of accommodationRegexes) {
-    const match = html.match(regex);
-    if (match && match[1]) {
-      return match[1];
+  try {
+    // Focus on product listings and accommodations
+    const accommodationRegexes = [
+      /<div[^>]*class="[^"]*accommodation-list[^"]*"[^>]*>([\s\S]*?)<\/div>/i,
+      /<div[^>]*class="[^"]*hotel-list[^"]*"[^>]*>([\s\S]*?)<\/div>/i,
+      /<div[^>]*class="[^"]*property-list[^"]*"[^>]*>([\s\S]*?)<\/div>/i,
+      /<div[^>]*class="[^"]*search-results[^"]*"[^>]*>([\s\S]*?)<\/div>/i,
+      /<section[^>]*class="[^"]*listings[^"]*"[^>]*>([\s\S]*?)<\/section>/i,
+      /<ul[^>]*class="[^"]*property-list[^"]*"[^>]*>([\s\S]*?)<\/ul>/i,
+      /<div[^>]*id="[^"]*results[^"]*"[^>]*>([\s\S]*?)<\/div>/i,
+      /<main[^>]*>([\s\S]*?)<\/main>/i,
+      /<article[^>]*>([\s\S]*?)<\/article>/i,
+      /<section[^>]*>([\s\S]*?)<\/section>/i,
+      /<div[^>]*class="[^"]*content[^"]*"[^>]*>([\s\S]*?)<\/div>/i,
+      /<div[^>]*class="[^"]*container[^"]*"[^>]*>([\s\S]*?)<\/div>/i,
+    ];
+    
+    // Try each regex pattern to find the main content
+    for (const regex of accommodationRegexes) {
+      const match = html.match(regex);
+      if (match && match[1]) {
+        console.log(`Matched content using pattern: ${regex.toString().substring(0, 30)}...`);
+        return match[1];
+      }
     }
+    
+    // If no specific section matches, remove script and style tags to reduce noise
+    let cleanedHtml = html
+      .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '')
+      .replace(/<style\b[^<]*(?:(?!<\/style>)<[^<]*)*<\/style>/gi, '')
+      .replace(/<header\b[^<]*(?:(?!<\/header>)<[^<]*)*<\/header>/gi, '')
+      .replace(/<footer\b[^<]*(?:(?!<\/footer>)<[^<]*)*<\/footer>/gi, '')
+      .replace(/<nav\b[^<]*(?:(?!<\/nav>)<[^<]*)*<\/nav>/gi, '');
+    
+    console.log("No specific content area matched, using cleaned HTML");
+    
+    // Extract only the body content if possible
+    const bodyMatch = cleanedHtml.match(/<body[^>]*>([\s\S]*?)<\/body>/i);
+    if (bodyMatch && bodyMatch[1]) {
+      console.log("Extracted body content");
+      return bodyMatch[1];
+    }
+    
+    // Return a shortened version of the cleaned HTML
+    console.log("Using shortened cleaned HTML");
+    return cleanedHtml.length > 15000 ? cleanedHtml.substring(0, 15000) : cleanedHtml;
+  } catch (error) {
+    console.error(`Error extracting main content: ${error.message}`);
+    return html.length > 10000 ? html.substring(0, 10000) : html;
   }
-  
-  // If no specific section matches, remove script and style tags to reduce noise
-  let cleanedHtml = html
-    .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '')
-    .replace(/<style\b[^<]*(?:(?!<\/style>)<[^<]*)*<\/style>/gi, '')
-    .replace(/<header\b[^<]*(?:(?!<\/header>)<[^<]*)*<\/header>/gi, '')
-    .replace(/<footer\b[^<]*(?:(?!<\/footer>)<[^<]*)*<\/footer>/gi, '')
-    .replace(/<nav\b[^<]*(?:(?!<\/nav>)<[^<]*)*<\/nav>/gi, '');
-  
-  // Extract only the body content if possible
-  const bodyMatch = cleanedHtml.match(/<body[^>]*>([\s\S]*?)<\/body>/i);
-  if (bodyMatch && bodyMatch[1]) {
-    return bodyMatch[1];
-  }
-  
-  // Return a shortened version of the cleaned HTML
-  return cleanedHtml.length > 20000 ? cleanedHtml.substring(0, 20000) : cleanedHtml;
 }
 
 // Helper function to normalize the extracted properties
@@ -394,6 +445,12 @@ function normalizeProperties(properties: any[]): ExtractedProperty[] {
     if (!property) return {};
     
     try {
+      // Verify required fields exist
+      if (!property.name && !property.location) {
+        console.log("Skipping property without name or location");
+        return {};
+      }
+      
       return {
         name: normalizeText(property.name),
         description: normalizeText(property.description),
@@ -403,8 +460,8 @@ function normalizeProperties(properties: any[]): ExtractedProperty[] {
         amenities: normalizeArray(property.amenities),
         hours: normalizeText(property.hours),
         image: normalizeUrl(property.image),
-        images: Array.isArray(property.images) ? property.images.map(normalizeUrl) : [],
-        type: normalizeText(property.type),
+        images: Array.isArray(property.images) ? property.images.map(normalizeUrl).filter(Boolean) : [],
+        type: normalizeText(property.type || 'Turismo Rural'),
         contact: {
           phone: normalizeText(property.contact?.phone),
           email: normalizeText(property.contact?.email),
@@ -415,7 +472,7 @@ function normalizeProperties(properties: any[]): ExtractedProperty[] {
       console.error("Error normalizing property:", e);
       return {};
     }
-  }).filter(p => Object.keys(p).length > 0);
+  }).filter(p => Object.keys(p).length > 0 && p.name);
 }
 
 // Helper functions to normalize data
