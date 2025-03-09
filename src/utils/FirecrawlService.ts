@@ -16,10 +16,21 @@ export interface ExtractedProperty {
   };
   image?: string;
   images?: string[];
+  type?: string; // Added property type for categorization
 }
 
 class FirecrawlServiceClass {
   private trivagoUrl = "https://www.trivago.com.br";
+  
+  // Predefined property types for Paraná tourism
+  private propertyTypes = [
+    'Agroturismo', 
+    'Turismo Rural', 
+    'Fazenda', 
+    'Chalé', 
+    'Café Colonial',
+    'Pousada Rural'
+  ];
   
   async scrapeWebsite(url: string): Promise<{ 
     success: boolean; 
@@ -41,11 +52,10 @@ class FirecrawlServiceClass {
       // Simulated small delay to mimic API call
       await new Promise(resolve => setTimeout(resolve, 1000));
       
-      // Mock properties - use Trivago specific mocks for Trivago URLs,
-      // or generic mocks for other URLs
+      // Mock properties - use Trivago or Paraná-specific mocks
       let mockProperties: ExtractedProperty[] = [];
       
-      if (url.includes('trivago.com')) {
+      if (url.includes('trivago.com') || url.includes('parana') || url.includes('paraná')) {
         // Mock properties based on Trivago agrotourism in Paraná
         mockProperties = [
           {
@@ -65,7 +75,8 @@ class FirecrawlServiceClass {
             images: [
               "https://images.unsplash.com/photo-1615880484746-a134be9a6ecf",
               "https://images.unsplash.com/photo-1542718610-a1d656d1884c"
-            ]
+            ],
+            type: "Pousada Rural"
           },
           {
             name: "Fazenda Ecoturismo Paraná",
@@ -84,7 +95,8 @@ class FirecrawlServiceClass {
             images: [
               "https://images.unsplash.com/photo-1500076656116-558758c991c1",
               "https://images.unsplash.com/photo-1510598145-d0b9d7c1a2ad"
-            ]
+            ],
+            type: "Agroturismo"
           },
           {
             name: "Recanto das Araucárias",
@@ -103,11 +115,52 @@ class FirecrawlServiceClass {
             images: [
               "https://images.unsplash.com/photo-1517396751741-21bce539cd9d",
               "https://images.unsplash.com/photo-1579033385971-a7bc8c6f8c64"
-            ]
+            ],
+            type: "Turismo Rural"
+          },
+          {
+            name: "Chalés da Serra Paranaense",
+            description: "Chalés aconchegantes com vista panorâmica para a Serra do Mar",
+            location: "São José dos Pinhais, Paraná",
+            price: "R$ 275 por noite",
+            activities: ["Tirolesa", "Rappel", "Caminhada na natureza"],
+            amenities: ["Lareira", "Cozinha equipada", "Churrasqueira"],
+            hours: "Check-in: 15h / Check-out: 12h",
+            contact: {
+              phone: "(41) 99765-4321",
+              email: "reservas@chalesdaerra.com.br",
+              website: "https://www.chalesserra.com.br"
+            },
+            image: "https://images.unsplash.com/photo-1522156373667-4c7234bbd804",
+            images: [
+              "https://images.unsplash.com/photo-1522156373667-4c7234bbd804",
+              "https://images.unsplash.com/photo-1601918774946-25832a4be0d6"
+            ],
+            type: "Chalé"
+          },
+          {
+            name: "Café Colonial Witmarsun",
+            description: "Tradicional café colonial com influências germânicas e produtos artesanais",
+            location: "Witmarsum, Paraná",
+            price: "R$ 85 por pessoa",
+            activities: ["Degustação de produtos coloniais", "Visita à casa de queijos", "Passeio cultural"],
+            amenities: ["Amplo estacionamento", "Área para crianças", "Produtos para venda"],
+            hours: "Sábados e Domingos: 9h às 18h",
+            contact: {
+              phone: "(42) 3533-1212",
+              email: "contato@cafewitmarsum.com.br",
+              website: "https://www.cafewitmarsum.com.br"
+            },
+            image: "https://images.unsplash.com/photo-1511018556340-d16986a1c194",
+            images: [
+              "https://images.unsplash.com/photo-1511018556340-d16986a1c194",
+              "https://images.unsplash.com/photo-1554118811-1e0d58224f24"
+            ],
+            type: "Café Colonial"
           }
         ];
       } else {
-        // Generic mocks for other websites
+        // Generic mocks for other websites, but with Paraná context and categories
         mockProperties = [
           {
             name: "Hotel Fazenda Rural",
@@ -126,7 +179,8 @@ class FirecrawlServiceClass {
             images: [
               "https://images.unsplash.com/photo-1566073771259-6a8506099945",
               "https://images.unsplash.com/photo-1566908829550-e6551b00979b"
-            ]
+            ],
+            type: "Fazenda"
           },
           {
             name: "Pousada Natureza Viva",
@@ -145,7 +199,28 @@ class FirecrawlServiceClass {
             images: [
               "https://images.unsplash.com/photo-1521401830884-6c03c1c87ebb",
               "https://images.unsplash.com/photo-1528127269322-539801943592"
-            ]
+            ],
+            type: "Turismo Rural"
+          },
+          {
+            name: "Chalés da Montanha",
+            description: "Hospedagem rústica e aconchegante com vista para as montanhas",
+            location: "Região Serrana, Paraná",
+            price: "R$ 195 por noite",
+            activities: ["Caminhadas", "Cavalgadas", "Contemplação da natureza"],
+            amenities: ["Calefação", "Cozinha completa", "Área externa privativa"],
+            hours: "Check-in: 14h / Check-out: 11h",
+            contact: {
+              phone: "(41) 99888-7777",
+              email: "reservas@chalesmontanha.com.br",
+              website: url
+            },
+            image: "https://images.unsplash.com/photo-1510798831971-661eb04b3739",
+            images: [
+              "https://images.unsplash.com/photo-1510798831971-661eb04b3739",
+              "https://images.unsplash.com/photo-1542718610-a1d656d1884c"
+            ],
+            type: "Chalé"
           }
         ];
       }
@@ -223,6 +298,9 @@ class FirecrawlServiceClass {
       // Clean and normalize price
       let normalizedPrice = property.price || '';
       
+      // Assign a random property type if not specified
+      const type = property.type || this.getRandomPropertyType();
+      
       // Make sure arrays are actually arrays
       const activities = Array.isArray(property.activities) 
         ? property.activities 
@@ -251,9 +329,16 @@ class FirecrawlServiceClass {
           website: property.contact?.website || ''
         },
         image: property.image || '',
-        images: images
+        images: images,
+        type: type // Include the property type in normalized data
       };
     });
+  }
+  
+  // Helper to get a random property type from the predefined list
+  private getRandomPropertyType(): string {
+    const randomIndex = Math.floor(Math.random() * this.propertyTypes.length);
+    return this.propertyTypes[randomIndex];
   }
 }
 

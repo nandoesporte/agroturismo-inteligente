@@ -9,20 +9,41 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
-import { Plus, Undo2, Check, X, ExternalLink, Phone, Mail, Info, Sparkles, Clock, Home } from 'lucide-react';
+import { Plus, Undo2, Check, X, ExternalLink, Phone, Mail, Info, Sparkles, Clock, Home, Tag } from 'lucide-react';
 import {
   Tooltip,
   TooltipContent,
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
+// Predefined URLs focused on Paraná rural tourism
 const predefinedUrls = [
   { name: "Trivago Agroturismo Paraná", url: "https://www.trivago.com.br/pt-BR/srl/hotels-paraná-brasil/agriturismo-pousada-rural?search=paraná%20agroturismo" },
   { name: "Trivago Pousadas Rurais Paraná", url: "https://www.trivago.com.br/pt-BR/srl/hotels-paraná-brasil/pousada-rural?search=paraná%20pousada%20rural" },
   { name: "Trivago Fazendas Paraná", url: "https://www.trivago.com.br/pt-BR/srl/hotels-paraná-brasil/fazenda-hotel?search=paraná%20fazenda%20hotel" },
   { name: "Trivago Hotéis Rurais Paraná", url: "https://www.trivago.com.br/pt-BR/srl/hotels-paraná-brasil/hotel%20rural?search=paraná%20hotel%20rural" },
-  { name: "Trivago Ecoturismo Paraná", url: "https://www.trivago.com.br/pt-BR/srl/hotels-paraná-brasil/eco%20resort?search=paraná%20ecoturismo" }
+  { name: "Trivago Ecoturismo Paraná", url: "https://www.trivago.com.br/pt-BR/srl/hotels-paraná-brasil/eco%20resort?search=paraná%20ecoturismo" },
+  { name: "Chalés no Paraná", url: "https://www.trivago.com.br/pt-BR/srl/hotels-paraná-brasil/chales?search=paraná%20chalés" },
+  { name: "Cafés Coloniais Paraná", url: "https://www.google.com/search?q=cafés+coloniais+paraná" }
+];
+
+// Property categories for filtering
+const propertyCategories = [
+  "Todos",
+  "Agroturismo",
+  "Turismo Rural",
+  "Fazenda",
+  "Chalé",
+  "Café Colonial",
+  "Pousada Rural"
 ];
 
 interface ScrapingToolProps {
@@ -38,6 +59,7 @@ export const ScrapingTool: React.FC<ScrapingToolProps> = ({ onImportProperty }) 
   const [scrapedProperties, setScrapedProperties] = useState<ExtractedProperty[]>([]);
   const [selectedProperties, setSelectedProperties] = useState<Record<number, boolean>>({});
   const [activeTab, setActiveTab] = useState("predefined");
+  const [selectedCategory, setSelectedCategory] = useState("Todos");
 
   const handleUrlSelect = (url: string) => {
     setSelectedUrl(url);
@@ -130,6 +152,7 @@ export const ScrapingTool: React.FC<ScrapingToolProps> = ({ onImportProperty }) 
           email: property.contact?.email || '',
           website: property.contact?.website || ''
         },
+        type: property.type || '',
         is_featured: false
       };
       
@@ -145,18 +168,23 @@ export const ScrapingTool: React.FC<ScrapingToolProps> = ({ onImportProperty }) 
     setSelectedProperties({});
   };
 
+  // Filter properties by selected category
+  const filteredProperties = selectedCategory === "Todos"
+    ? scrapedProperties
+    : scrapedProperties.filter(property => property.type === selectedCategory);
+
   return (
     <Card className="w-full">
       <CardHeader>
         <CardTitle>Extração de Dados com IA</CardTitle>
         <CardDescription>
-          Use IA para extrair informações de propriedades a partir de sites
+          Use IA para extrair informações de propriedades a partir de sites. Especializado em turismo rural no Paraná.
         </CardDescription>
       </CardHeader>
       <CardContent>
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
           <TabsList className="grid w-full grid-cols-2">
-            <TabsTrigger value="predefined">Buscas Predefinidas</TabsTrigger>
+            <TabsTrigger value="predefined">Buscas Predefinidas (Paraná)</TabsTrigger>
             <TabsTrigger value="custom">URL Personalizada</TabsTrigger>
           </TabsList>
           
@@ -204,6 +232,7 @@ export const ScrapingTool: React.FC<ScrapingToolProps> = ({ onImportProperty }) 
               />
               <p className="text-xs text-muted-foreground">
                 Insira qualquer URL de site que contenha dados de propriedades de turismo ou hospedagem.
+                Os resultados serão adaptados para o contexto do turismo rural no Paraná.
               </p>
             </div>
             
@@ -229,156 +258,182 @@ export const ScrapingTool: React.FC<ScrapingToolProps> = ({ onImportProperty }) 
 
         {scrapedProperties.length > 0 && (
           <div className="mt-6 space-y-4">
-            <div className="flex items-center justify-between">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
               <h3 className="text-lg font-semibold">
-                Propriedades Encontradas ({scrapedProperties.length})
+                Propriedades Encontradas ({filteredProperties.length} de {scrapedProperties.length})
               </h3>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={handleImportSelected}
-                className="text-sm"
-              >
-                <Plus className="h-4 w-4 mr-1" /> Importar Selecionadas
-              </Button>
+              
+              <div className="flex flex-col sm:flex-row gap-3">
+                <Select value={selectedCategory} onValueChange={setSelectedCategory}>
+                  <SelectTrigger className="w-full sm:w-[180px]">
+                    <SelectValue placeholder="Filtrar por categoria" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {propertyCategories.map((category) => (
+                      <SelectItem key={category} value={category}>
+                        {category}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleImportSelected}
+                  className="text-sm"
+                >
+                  <Plus className="h-4 w-4 mr-1" /> Importar Selecionadas
+                </Button>
+              </div>
             </div>
             
             <div className="border rounded-md divide-y">
-              {scrapedProperties.map((property, index) => (
-                <div key={index} className="p-3 flex items-start space-x-3">
-                  <Checkbox
-                    id={`property-${index}`}
-                    checked={selectedProperties[index] || false}
-                    onCheckedChange={() => togglePropertySelection(index)}
-                    className="mt-1"
-                  />
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-start justify-between">
-                      <div>
-                        <p className="font-medium truncate">{property.name || "Propriedade sem nome"}</p>
-                        <p className="text-sm text-muted-foreground truncate">
-                          {property.location || "Localização não especificada"}
-                        </p>
-                      </div>
-                      {property.price && (
-                        <span className="text-sm font-medium px-2 py-1 bg-green-100 text-green-800 rounded">
-                          {property.price}
-                        </span>
-                      )}
-                    </div>
-                    
-                    {/* Activities */}
-                    {property.activities && property.activities.length > 0 && (
-                      <div className="mt-2">
-                        <p className="text-xs font-medium text-muted-foreground mb-1">Atividades:</p>
-                        <div className="flex flex-wrap gap-1">
-                          {property.activities.map((activity, actIdx) => (
-                            <span 
-                              key={actIdx} 
-                              className="inline-block px-2 py-1 bg-nature-50 text-nature-700 rounded-full text-xs"
-                            >
-                              {activity}
-                            </span>
-                          ))}
+              {filteredProperties.map((property, index) => {
+                const originalIndex = scrapedProperties.findIndex(p => p === property);
+                return (
+                  <div key={originalIndex} className="p-3 flex items-start space-x-3">
+                    <Checkbox
+                      id={`property-${originalIndex}`}
+                      checked={selectedProperties[originalIndex] || false}
+                      onCheckedChange={() => togglePropertySelection(originalIndex)}
+                      className="mt-1"
+                    />
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-start justify-between">
+                        <div>
+                          <p className="font-medium truncate">{property.name || "Propriedade sem nome"}</p>
+                          <div className="flex items-center gap-2">
+                            <p className="text-sm text-muted-foreground truncate">
+                              {property.location || "Localização não especificada"}
+                            </p>
+                            {property.type && (
+                              <span className="inline-block px-2 py-0.5 bg-amber-100 text-amber-800 rounded-full text-xs">
+                                {property.type}
+                              </span>
+                            )}
+                          </div>
                         </div>
+                        {property.price && (
+                          <span className="text-sm font-medium px-2 py-1 bg-green-100 text-green-800 rounded">
+                            {property.price}
+                          </span>
+                        )}
                       </div>
-                    )}
-                    
-                    {/* Amenities */}
-                    {property.amenities && property.amenities.length > 0 && (
-                      <div className="mt-2">
-                        <p className="text-xs font-medium text-muted-foreground mb-1">Comodidades:</p>
-                        <div className="flex flex-wrap gap-1">
-                          {property.amenities.map((amenity, amenIdx) => (
-                            <span 
-                              key={amenIdx} 
-                              className="inline-block px-2 py-1 bg-blue-50 text-blue-700 rounded-full text-xs"
-                            >
-                              {amenity}
-                            </span>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-                    
-                    {/* Hours */}
-                    {property.hours && (
-                      <div className="mt-2 flex items-center gap-1 text-xs">
-                        <Clock size={12} className="text-muted-foreground" />
-                        <span className="text-muted-foreground">{property.hours}</span>
-                      </div>
-                    )}
-                    
-                    {/* Contact Information */}
-                    <div className="mt-2 flex items-center flex-wrap gap-3 text-xs text-muted-foreground">
-                      {property.image && (
-                        <TooltipProvider>
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                              <span className="flex items-center gap-1 text-blue-600">
-                                <Info size={12} /> Imagem disponível
-                              </span>
-                            </TooltipTrigger>
-                            <TooltipContent>
-                              <p>Imagem disponível para esta propriedade</p>
-                            </TooltipContent>
-                          </Tooltip>
-                        </TooltipProvider>
-                      )}
                       
-                      {property.contact?.phone && (
-                        <TooltipProvider>
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                              <span className="flex items-center gap-1">
-                                <Phone size={12} /> {property.contact.phone}
-                              </span>
-                            </TooltipTrigger>
-                            <TooltipContent>
-                              <p>Telefone de contato</p>
-                            </TooltipContent>
-                          </Tooltip>
-                        </TooltipProvider>
-                      )}
-                      
-                      {property.contact?.email && (
-                        <TooltipProvider>
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                              <span className="flex items-center gap-1">
-                                <Mail size={12} /> {property.contact.email}
-                              </span>
-                            </TooltipTrigger>
-                            <TooltipContent>
-                              <p>Email de contato</p>
-                            </TooltipContent>
-                          </Tooltip>
-                        </TooltipProvider>
-                      )}
-                      
-                      {property.contact?.website && (
-                        <TooltipProvider>
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                              <a 
-                                href={property.contact.website} 
-                                target="_blank" 
-                                rel="noopener noreferrer"
-                                className="flex items-center gap-1 text-blue-500 hover:underline"
+                      {/* Activities */}
+                      {property.activities && property.activities.length > 0 && (
+                        <div className="mt-2">
+                          <p className="text-xs font-medium text-muted-foreground mb-1">Atividades:</p>
+                          <div className="flex flex-wrap gap-1">
+                            {property.activities.map((activity, actIdx) => (
+                              <span 
+                                key={actIdx} 
+                                className="inline-block px-2 py-1 bg-nature-50 text-nature-700 rounded-full text-xs"
                               >
-                                <ExternalLink size={12} /> Ver site
-                              </a>
-                            </TooltipTrigger>
-                            <TooltipContent>
-                              <p>Abrir página no site</p>
-                            </TooltipContent>
-                          </Tooltip>
-                        </TooltipProvider>
+                                {activity}
+                              </span>
+                            ))}
+                          </div>
+                        </div>
                       )}
+                      
+                      {/* Amenities */}
+                      {property.amenities && property.amenities.length > 0 && (
+                        <div className="mt-2">
+                          <p className="text-xs font-medium text-muted-foreground mb-1">Comodidades:</p>
+                          <div className="flex flex-wrap gap-1">
+                            {property.amenities.map((amenity, amenIdx) => (
+                              <span 
+                                key={amenIdx} 
+                                className="inline-block px-2 py-1 bg-blue-50 text-blue-700 rounded-full text-xs"
+                              >
+                                {amenity}
+                              </span>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                      
+                      {/* Hours */}
+                      {property.hours && (
+                        <div className="mt-2 flex items-center gap-1 text-xs">
+                          <Clock size={12} className="text-muted-foreground" />
+                          <span className="text-muted-foreground">{property.hours}</span>
+                        </div>
+                      )}
+                      
+                      {/* Contact Information */}
+                      <div className="mt-2 flex items-center flex-wrap gap-3 text-xs text-muted-foreground">
+                        {property.image && (
+                          <TooltipProvider>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <span className="flex items-center gap-1 text-blue-600">
+                                  <Info size={12} /> Imagem disponível
+                                </span>
+                              </TooltipTrigger>
+                              <TooltipContent>
+                                <p>Imagem disponível para esta propriedade</p>
+                              </TooltipContent>
+                            </Tooltip>
+                          </TooltipProvider>
+                        )}
+                        
+                        {property.contact?.phone && (
+                          <TooltipProvider>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <span className="flex items-center gap-1">
+                                  <Phone size={12} /> {property.contact.phone}
+                                </span>
+                              </TooltipTrigger>
+                              <TooltipContent>
+                                <p>Telefone de contato</p>
+                              </TooltipContent>
+                            </Tooltip>
+                          </TooltipProvider>
+                        )}
+                        
+                        {property.contact?.email && (
+                          <TooltipProvider>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <span className="flex items-center gap-1">
+                                  <Mail size={12} /> {property.contact.email}
+                                </span>
+                              </TooltipTrigger>
+                              <TooltipContent>
+                                <p>Email de contato</p>
+                              </TooltipContent>
+                            </Tooltip>
+                          </TooltipProvider>
+                        )}
+                        
+                        {property.contact?.website && (
+                          <TooltipProvider>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <a 
+                                  href={property.contact.website} 
+                                  target="_blank" 
+                                  rel="noopener noreferrer"
+                                  className="flex items-center gap-1 text-blue-500 hover:underline"
+                                >
+                                  <ExternalLink size={12} /> Ver site
+                                </a>
+                              </TooltipTrigger>
+                              <TooltipContent>
+                                <p>Abrir página no site</p>
+                              </TooltipContent>
+                            </Tooltip>
+                          </TooltipProvider>
+                        )}
+                      </div>
                     </div>
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           </div>
         )}
