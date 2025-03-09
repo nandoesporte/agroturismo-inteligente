@@ -213,7 +213,7 @@ export const ScrapingTool: React.FC<ScrapingToolProps> = ({ onImportProperty }) 
                 "Analisando com IA..."
               ) : (
                 <>
-                  <Sparkles className="h-4 w-4 mr-2" /> Extrair Dados com IA
+                  <Sparkles className="h-4 w-4 mr-2" /> Extrair Até 20 Propriedades com IA
                 </>
               )}
             </Button>
@@ -245,7 +245,7 @@ export const ScrapingTool: React.FC<ScrapingToolProps> = ({ onImportProperty }) 
                 "Analisando com IA..."
               ) : (
                 <>
-                  <Sparkles className="h-4 w-4 mr-2" /> Extrair Dados com IA
+                  <Sparkles className="h-4 w-4 mr-2" /> Extrair Até 20 Propriedades com IA
                 </>
               )}
             </Button>

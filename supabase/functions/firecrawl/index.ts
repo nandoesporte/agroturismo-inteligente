@@ -21,6 +21,7 @@ type ExtractedProperty = {
   };
   image?: string;
   images?: string[];
+  type?: string;
 };
 
 serve(async (req) => {
@@ -67,30 +68,31 @@ serve(async (req) => {
       const mainContent = extractMainContent(htmlContent);
       
       // Truncate content to stay within token limits
-      const truncatedContent = mainContent.length > 10000 
-        ? mainContent.substring(0, 10000) + "..." 
+      const truncatedContent = mainContent.length > 15000 
+        ? mainContent.substring(0, 15000) + "..." 
         : mainContent;
       
       console.log(`Reduced content to ${truncatedContent.length} bytes`);
       
       // Create a specialized prompt for the AI to extract property data
       const prompt = `
-        Você é um especialista em extração de dados especializado em propriedades de hospedagem e turismo. Sua tarefa é extrair informações de propriedades a partir do conteúdo HTML fornecido.
+        Você é um especialista em extração de dados especializado em propriedades de hospedagem e turismo rural no Paraná, Brasil. Sua tarefa é extrair informações de propriedades a partir do conteúdo HTML fornecido.
         
-        Extraia todas as propriedades/hospedagens que você encontrar. Para cada uma, forneça APENAS os seguintes campos:
+        Extraia até 20 propriedades/hospedagens que você encontrar. Para cada uma, forneça APENAS os seguintes campos:
         1. Nome (string): Nome da propriedade/pousada/hotel
-        2. Localização (string): Localização da propriedade
+        2. Localização (string): Localização da propriedade, preferencialmente no Paraná
         3. Preço (string): Informação de preço exatamente como aparece (com símbolo de moeda)
         4. Image (string): URL da imagem principal da propriedade
         5. Images (array de strings): URLs de imagens adicionais da propriedade
         6. Atividades (array de strings): Lista de atividades disponíveis
         7. Comodidades (array de strings): Lista de comodidades como Wi-Fi, Estacionamento, etc.
-        8. Informações de contato:
+        8. Tipo (string): Categorize como 'Agroturismo', 'Turismo Rural', 'Fazenda', 'Chalé', 'Café Colonial', ou 'Pousada Rural'
+        9. Informações de contato:
            - Telefone (string): Número de telefone
            - Email (string): Endereço de e-mail
            - Website (string): URL do site
 
-        Formate sua resposta como um JSON válido com exatamente esses nomes de campos:
+        Extraia até 20 propriedades, não menos. Formate sua resposta como um JSON válido com exatamente esses nomes de campos:
         [
           {
             "name": "Nome da Propriedade",
@@ -101,6 +103,7 @@ serve(async (req) => {
             "activities": ["atividade1", "atividade2"],
             "amenities": ["comodidade1", "comodidade2"],
             "hours": "Informação sobre horários",
+            "type": "Categoria da propriedade",
             "contact": {
               "phone": "número de telefone",
               "email": "endereço de email",
@@ -127,7 +130,7 @@ serve(async (req) => {
             { role: "user", content: prompt + "\n\nHere is the content to extract from:\n\n" + truncatedContent }
           ],
           temperature: 0.2, // Lower temperature for more consistent structured output
-          max_tokens: 3000
+          max_tokens: 4000  // Increased to allow for more properties
         })
       });
 
@@ -172,8 +175,7 @@ serve(async (req) => {
         }];
       }
       
-      // We don't need to filter specifically for Paraná properties since we're now accepting any URL
-      // just normalize the extracted properties
+      // Normalize the extracted properties
       const normalizedProperties = normalizeProperties(extractedProperties);
 
       return new Response(
@@ -237,7 +239,7 @@ function extractMainContent(html: string): string {
   }
   
   // Return a shortened version of the cleaned HTML
-  return cleanedHtml.length > 20000 ? cleanedHtml.substring(0, 20000) : cleanedHtml;
+  return cleanedHtml.length > 30000 ? cleanedHtml.substring(0, 30000) : cleanedHtml;
 }
 
 // Helper function to normalize the extracted properties
@@ -253,6 +255,7 @@ function normalizeProperties(properties: any[]): ExtractedProperty[] {
       hours: normalizeText(property.hours),
       image: normalizeUrl(property.image),
       images: Array.isArray(property.images) ? property.images.map(normalizeUrl) : [],
+      type: normalizeText(property.type),
       contact: {
         phone: normalizeText(property.contact?.phone),
         email: normalizeText(property.contact?.email),
