@@ -1,4 +1,3 @@
-
 import React, { useState, useRef } from 'react';
 import { Camera, Aperture, Upload, RefreshCw, Info } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -79,7 +78,9 @@ const SpeciesRecognition = () => {
       const ctx = canvas.getContext('2d');
       if (ctx) {
         ctx.drawImage(videoRef.current, 0, 0);
-        const imageDataUrl = canvas.toDataURL('image/jpeg', 0.9);
+        
+        // Use a lower quality (0.7) to reduce file size while maintaining decent quality
+        const imageDataUrl = canvas.toDataURL('image/jpeg', 0.7);
         setCapturedImage(imageDataUrl);
         stopCapture();
       }
@@ -103,11 +104,64 @@ const SpeciesRecognition = () => {
       return;
     }
     
+    // Check file size (limit to 5MB)
+    if (file.size > 5 * 1024 * 1024) {
+      setError('A imagem selecionada é muito grande. Por favor, selecione uma imagem menor que 5MB.');
+      return;
+    }
+    
     const reader = new FileReader();
     reader.onload = () => {
       setCapturedImage(reader.result as string);
     };
     reader.readAsDataURL(file);
+  };
+  
+  // Pre-process image to reduce size if needed
+  const preprocessImage = (dataUrl: string): string => {
+    // If image is already small enough, return as is
+    if (dataUrl.length < 500000) return dataUrl;
+    
+    // Otherwise, reduce quality
+    const img = new Image();
+    img.src = dataUrl;
+    
+    const canvas = document.createElement('canvas');
+    const MAX_WIDTH = 1024;
+    const MAX_HEIGHT = 1024;
+    let width = img.width;
+    let height = img.height;
+    
+    // Calculate the new dimensions
+    if (width > height) {
+      if (width > MAX_WIDTH) {
+        height *= MAX_WIDTH / width;
+        width = MAX_WIDTH;
+      }
+    } else {
+      if (height > MAX_HEIGHT) {
+        width *= MAX_HEIGHT / height;
+        height = MAX_HEIGHT;
+      }
+    }
+    
+    canvas.width = width;
+    canvas.height = height;
+    
+    const ctx = canvas.getContext('2d');
+    ctx?.drawImage(img, 0, 0, width, height);
+    
+    // Adjust quality based on size
+    let quality = 0.7;
+    let result = canvas.toDataURL('image/jpeg', quality);
+    
+    // If still too large, reduce quality further
+    if (result.length > 1000000) {
+      quality = 0.5;
+      result = canvas.toDataURL('image/jpeg', quality);
+    }
+    
+    return result;
   };
   
   // Process the image with AI
@@ -119,11 +173,13 @@ const SpeciesRecognition = () => {
     setSpeciesInfo(null);
     
     try {
-      // Send image as JSON
+      // Optimize image size before sending
+      const processedImage = preprocessImage(capturedImage);
+      console.log("Image prepared for sending, size:", processedImage.length);
+      
+      // Send image as JSON with proper structure
       const { data, error: functionError } = await supabase.functions.invoke('species-recognition', {
-        body: { 
-          image: capturedImage 
-        },
+        body: { image: processedImage },
         headers: {
           'Content-Type': 'application/json',
         },
@@ -148,10 +204,10 @@ const SpeciesRecognition = () => {
       });
     } catch (err) {
       console.error('Erro ao processar imagem:', err);
-      setError('Ocorreu um erro ao analisar a imagem. Por favor, tente novamente.');
+      setError('Ocorreu um erro ao analisar a imagem. Por favor, tente novamente com uma foto mais clara e nítida.');
       toast({
         title: "Erro",
-        description: "Falha ao identificar espécie. Tente uma foto mais clara.",
+        description: "Falha ao identificar espécie. Tente uma foto com melhor iluminação e foco no objeto principal.",
         variant: "destructive",
       });
     } finally {
@@ -275,6 +331,9 @@ const SpeciesRecognition = () => {
           <Upload className="mx-auto h-12 w-12 text-gray-400 dark:text-gray-500 mb-2" />
           <p className="text-sm text-gray-500 dark:text-gray-400">
             Clique para selecionar uma imagem ou arraste e solte aqui
+          </p>
+          <p className="text-xs text-gray-400 mt-2">
+            Formato: JPG, PNG. Tamanho máximo: 5MB
           </p>
         </div>
       )}

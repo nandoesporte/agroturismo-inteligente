@@ -19,21 +19,39 @@ serve(async (req) => {
       throw new Error("Missing GROQ API key");
     }
 
-    // Get the raw request body to avoid parsing issues
+    console.log("Request received for species recognition");
+    
+    // Get the request content type
     const contentType = req.headers.get("content-type") || "";
     let imageBase64 = "";
     
     if (contentType.includes("application/json")) {
       try {
         // Handle JSON payload
-        const body = await req.json();
+        const requestText = await req.text();
+        console.log("Received JSON request body length:", requestText.length);
+        
+        if (!requestText || requestText.trim() === '') {
+          throw new Error("Empty request body");
+        }
+        
+        let body;
+        try {
+          body = JSON.parse(requestText);
+        } catch (parseError) {
+          console.error("JSON parse error:", parseError.message);
+          throw new Error("Invalid JSON format: " + parseError.message);
+        }
+        
         if (!body || !body.image) {
           throw new Error("No image data provided in the JSON payload");
         }
         
+        console.log("Image data received, length:", body.image.length);
         imageBase64 = body.image.replace(/^data:image\/[a-z]+;base64,/, "");
+        console.log("Base64 image extracted, length:", imageBase64.length);
       } catch (jsonError) {
-        console.error("JSON parsing error:", jsonError);
+        console.error("JSON processing error:", jsonError);
         throw new Error("Invalid JSON format: " + jsonError.message);
       }
     } else {
@@ -49,6 +67,7 @@ serve(async (req) => {
         // Convert image to base64
         const imageBytes = await imageFile.arrayBuffer();
         imageBase64 = btoa(String.fromCharCode(...new Uint8Array(imageBytes)));
+        console.log("FormData image processed, base64 length:", imageBase64.length);
       } catch (formError) {
         console.error("Form data parsing error:", formError.message);
         throw new Error("Could not process the image data. Please try a different format or image.");
@@ -58,7 +77,8 @@ serve(async (req) => {
     if (!imageBase64) {
       throw new Error("No image data was provided");
     }
-
+    
+    console.log("Processing image with vision model");
     const dataUri = `data:image/jpeg;base64,${imageBase64}`;
 
     // First, use LLaVA or similar vision model to identify the species
@@ -132,6 +152,7 @@ serve(async (req) => {
 
     const descriptionData = await descriptionResponse.json();
     const detailedDescription = descriptionData.choices[0].message.content;
+    console.log("Description generated successfully");
 
     return new Response(
       JSON.stringify({ 
