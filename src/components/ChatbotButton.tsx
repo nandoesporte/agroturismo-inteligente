@@ -41,7 +41,7 @@ const ChatbotButton = () => {
       <button
         onClick={toggleChat}
         className={cn(
-          "fixed z-50 flex items-center justify-center rounded-full shadow-lg trans",
+          "fixed z-[1000] flex items-center justify-center rounded-full shadow-lg transition-colors duration-200",
           isOpen ? "bg-foreground text-background" : "bg-nature-600 text-white hover:bg-nature-700",
           isMobile 
             ? "bottom-4 right-4 h-14 w-14"
@@ -62,10 +62,9 @@ const ChatbotButton = () => {
       {/* Chatbot panel */}
       <div 
         className={cn(
-          "fixed z-40 rounded-xl shadow-xl bg-white dark:bg-gray-900 trans overflow-hidden",
+          "fixed z-[999] rounded-xl shadow-xl bg-white dark:bg-gray-900 transition-all duration-300 overflow-hidden",
           "border border-nature-200 dark:border-nature-800",
           isOpen ? "opacity-100 scale-100" : "opacity-0 scale-95 pointer-events-none",
-          isAnimating && "transition-all duration-300",
           isMobile
             ? "bottom-20 right-4 left-4 w-auto max-w-none h-[70vh]"
             : "bottom-24 right-6 w-full max-w-md h-[500px]"

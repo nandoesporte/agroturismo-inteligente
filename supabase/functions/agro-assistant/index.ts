@@ -1,5 +1,6 @@
 
-import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+// Import from a newer version of the Deno standard library
+import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -130,7 +131,7 @@ serve(async (req) => {
       }),
       { 
         status: 200,
-        headers: { ...corsHeaders, "Content-Type": "application/json" }
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
       }
     );
   }
