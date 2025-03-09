@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
-import { MessageSquare, X, Smile } from 'lucide-react';
+import { MessageSquare, X, Bot, Send } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import Chatbot from './Chatbot';
 
@@ -41,20 +41,35 @@ const ChatbotButton = () => {
       <button
         onClick={toggleChat}
         className={cn(
-          "fixed z-[1000] flex items-center justify-center rounded-full shadow-lg transition-colors duration-200",
-          isOpen ? "bg-foreground text-background" : "bg-nature-600 text-white hover:bg-nature-700",
+          "fixed z-[1000] flex items-center justify-center shadow-lg transition-all duration-300",
+          isOpen 
+            ? "bg-foreground text-background rounded-full" 
+            : "bg-gradient-to-r from-nature-500 to-nature-600 text-white hover:from-nature-600 hover:to-nature-700 hover:shadow-xl",
           isMobile 
-            ? "bottom-4 right-4 h-14 w-14"
-            : "bottom-6 right-6 h-16 w-16"
+            ? isOpen 
+              ? "bottom-4 right-4 h-12 w-12" 
+              : "bottom-4 right-4 h-14 w-14 rounded-xl"
+            : isOpen 
+              ? "bottom-6 right-6 h-14 w-14" 
+              : "bottom-6 right-6 h-16 px-5 rounded-full"
         )}
         aria-label={isOpen ? "Fechar chat" : "Abrir chat"}
       >
         {isOpen ? (
           <X className={isMobile ? "h-5 w-5" : "h-6 w-6"} />
         ) : (
-          <div className="flex flex-col items-center justify-center">
-            <Smile className={isMobile ? "h-6 w-6" : "h-7 w-7"} />
-            <span className="text-xs mt-0.5">AgroGuia</span>
+          <div className={cn(
+            "flex items-center justify-center",
+            !isMobile && "gap-2"
+          )}>
+            {isMobile ? (
+              <Bot className="h-6 w-6" />
+            ) : (
+              <>
+                <Bot className="h-6 w-6" />
+                <span className="font-medium">AgroGuia</span>
+              </>
+            )}
           </div>
         )}
       </button>
@@ -64,7 +79,9 @@ const ChatbotButton = () => {
         className={cn(
           "fixed z-[999] rounded-xl shadow-xl bg-white dark:bg-gray-900 transition-all duration-300 overflow-hidden",
           "border border-nature-200 dark:border-nature-800",
-          isOpen ? "opacity-100 scale-100" : "opacity-0 scale-95 pointer-events-none",
+          isOpen 
+            ? "opacity-100 scale-100" 
+            : "opacity-0 scale-95 pointer-events-none",
           isMobile
             ? "bottom-20 right-4 left-4 w-auto max-w-none h-[70vh]"
             : "bottom-24 right-6 w-full max-w-md h-[500px]"
@@ -72,6 +89,19 @@ const ChatbotButton = () => {
       >
         {isOpen && <Chatbot isMobile={isMobile} />}
       </div>
+
+      {/* Pulse animation when closed */}
+      {!isOpen && (
+        <span 
+          className={cn(
+            "absolute rounded-full bg-nature-400 opacity-75",
+            "animate-ping",
+            isMobile 
+              ? "h-5 w-5 right-4 bottom-4" 
+              : "h-6 w-6 right-6 bottom-6"
+          )}
+        />
+      )}
     </>
   );
 };
