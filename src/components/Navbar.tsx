@@ -59,8 +59,13 @@ const Navbar = () => {
               alt="AgroRota Logo" 
               className="h-10 w-auto" 
             />
-            <span className="text-xl md:text-2xl font-bold playfair tracking-tight text-nature-800">
-              Agro<span className="text-nature-600">Rota</span>
+            <span className={cn(
+              "text-xl md:text-2xl font-bold playfair tracking-tight transition-colors duration-300",
+              isScrolled
+                ? "text-nature-800"
+                : "text-white"
+            )}>
+              Agro<span className={isScrolled ? "text-nature-600" : "text-white"}>Rota</span>
             </span>
           </Link>
 
@@ -73,8 +78,12 @@ const Navbar = () => {
                 className={cn(
                   "px-3 py-2 text-sm font-medium rounded-md transition-all duration-200",
                   location.pathname === link.path
-                    ? "text-nature-700 bg-nature-50 shadow-sm"
-                    : "text-muted-foreground hover:text-foreground hover:bg-muted"
+                    ? isScrolled 
+                      ? "text-nature-700 bg-nature-50 shadow-sm"
+                      : "text-white bg-white/20 shadow-sm"
+                    : isScrolled
+                      ? "text-muted-foreground hover:text-foreground hover:bg-muted"
+                      : "text-white/80 hover:text-white hover:bg-white/10"
                 )}
               >
                 {link.name}
@@ -91,8 +100,12 @@ const Navbar = () => {
                 className={cn(
                   "p-2 rounded-full transition-all duration-200",
                   location.pathname === link.path
-                    ? "text-nature-700 bg-nature-50 shadow-sm"
-                    : "text-muted-foreground hover:text-foreground hover:bg-muted"
+                    ? isScrolled
+                      ? "text-nature-700 bg-nature-50 shadow-sm"
+                      : "text-white bg-white/20 shadow-sm" 
+                    : isScrolled
+                      ? "text-muted-foreground hover:text-foreground hover:bg-muted"
+                      : "text-white/80 hover:text-white hover:bg-white/10"
                 )}
                 aria-label={link.label}
               >
@@ -105,7 +118,12 @@ const Navbar = () => {
           {/* Mobile menu button */}
           <button
             type="button"
-            className="md:hidden inline-flex items-center justify-center p-2 rounded-md text-foreground hover:bg-muted hover:text-foreground focus:outline-none"
+            className={cn(
+              "md:hidden inline-flex items-center justify-center p-2 rounded-md hover:bg-opacity-20 focus:outline-none",
+              isScrolled
+                ? "text-foreground hover:bg-muted"
+                : "text-white hover:bg-white/10"
+            )}
             onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
             aria-expanded={isMobileMenuOpen}
           >
