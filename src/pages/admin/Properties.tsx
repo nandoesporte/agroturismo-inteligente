@@ -166,6 +166,28 @@ const AdminProperties = () => {
 
   const handleRemoveImage = (index: number) => {
     const newImages = [...formData.images];
+    const imageUrl = newImages[index];
+    
+    const fileName = imageUrl.split('/').pop();
+    
+    if (fileName) {
+      if (imageUrl.includes('storage.googleapis.com') || imageUrl.includes('supabase.co')) {
+        supabase.storage
+          .from('properties')
+          .remove([fileName])
+          .then(({ error }) => {
+            if (error) {
+              console.error('Erro ao excluir imagem do storage:', error);
+              toast({
+                title: "Aviso",
+                description: "A imagem foi removida da lista, mas pode não ter sido excluída do armazenamento.",
+                variant: "default",
+              });
+            }
+          });
+      }
+    }
+    
     newImages.splice(index, 1);
     setFormData(prev => ({ ...prev, images: newImages }));
     
