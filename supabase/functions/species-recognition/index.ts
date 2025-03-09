@@ -15,8 +15,14 @@ serve(async (req) => {
 
   try {
     const GROQ_API_KEY = Deno.env.get('GROQ_API_KEY');
+    const GOOGLE_API_KEY = Deno.env.get('GOOGLE_API_KEY');
+    
     if (!GROQ_API_KEY) {
       throw new Error("Missing GROQ API key");
+    }
+    
+    if (!GOOGLE_API_KEY) {
+      throw new Error("Missing Google API key");
     }
 
     console.log("Request received for species recognition");
@@ -68,9 +74,9 @@ serve(async (req) => {
     console.log("Image data prepared for processing, length:", imageBase64.length);
     const dataUri = `data:image/jpeg;base64,${imageBase64}`;
 
-    // Use the Google Gemini Pro Vision model via API
+    // Use the Google Gemini Pro Vision model via API with improved prompt
     console.log("Sending image to Google Gemini API for species identification");
-    const visionResponse = await fetch("https://generativelanguage.googleapis.com/v1beta/models/gemini-pro-vision:generateContent?key=" + Deno.env.get('GOOGLE_API_KEY'), {
+    const visionResponse = await fetch("https://generativelanguage.googleapis.com/v1beta/models/gemini-pro-vision:generateContent?key=" + GOOGLE_API_KEY, {
       method: "POST",
       headers: {
         "Content-Type": "application/json"
@@ -80,7 +86,7 @@ serve(async (req) => {
           {
             parts: [
               {
-                text: "Você é um biólogo especialista em identificação de espécies. Analise esta imagem e identifique a espécie com a maior precisão possível. Forneça APENAS o nome científico (em itálico) e o nome popular em português do Brasil. Responda no formato 'Nome científico (Nome popular)'. Se não conseguir identificar com certeza, indique a família ou gênero mais provável."
+                text: "Você é um biólogo especialista em identificação de espécies com foco em biodiversidade brasileira. Analise esta imagem detalhadamente e identifique a espécie com a maior precisão possível. Forneça APENAS o nome científico (em itálico) e o nome popular em português do Brasil. Responda no formato 'Nome científico (Nome popular)'. Se não conseguir identificar com certeza, indique a família ou gênero mais provável e mencione características visíveis importantes para identificação."
               },
               {
                 inline_data: {
@@ -92,7 +98,7 @@ serve(async (req) => {
           }
         ],
         generationConfig: {
-          temperature: 0.2,
+          temperature: 0.1,
           maxOutputTokens: 150,
         }
       })
@@ -105,13 +111,19 @@ serve(async (req) => {
     }
 
     const visionData = await visionResponse.json();
-    console.log("Vision API response:", JSON.stringify(visionData));
+    console.log("Vision API response structure:", Object.keys(visionData));
     
-    // Extract the species identification from the response
+    // Extract the species identification from the response with better error handling
     let speciesIdentification = "";
     try {
-      speciesIdentification = visionData.candidates[0].content.parts[0].text.trim();
-      console.log("Species identified:", speciesIdentification);
+      if (visionData.candidates && visionData.candidates.length > 0) {
+        speciesIdentification = visionData.candidates[0].content.parts[0].text.trim();
+        console.log("Species identified:", speciesIdentification);
+      } else if (visionData.error) {
+        throw new Error(`API error: ${visionData.error.message || JSON.stringify(visionData.error)}`);
+      } else {
+        throw new Error("Unexpected API response format");
+      }
     } catch (error) {
       console.error("Error extracting species identification:", error);
       speciesIdentification = "Espécie não identificada. Por favor, tente com uma imagem mais clara.";

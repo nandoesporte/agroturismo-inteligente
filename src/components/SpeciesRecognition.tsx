@@ -1,4 +1,3 @@
-
 import React, { useState, useRef } from 'react';
 import { Camera, Aperture, Upload, RefreshCw, Info, Leaf } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -116,7 +115,7 @@ const SpeciesRecognition = () => {
     reader.readAsDataURL(file);
   };
   
-  // Improved image preprocessing with better quality control
+  // Improved image preprocessing with better quality control and enhanced debugging
   const preprocessImage = (dataUrl: string): Promise<string> => {
     return new Promise((resolve) => {
       const img = new Image();
@@ -145,23 +144,31 @@ const SpeciesRecognition = () => {
         const ctx = canvas.getContext('2d');
         ctx?.drawImage(img, 0, 0, width, height);
         
-        // Start with a higher quality, then reduce if necessary
-        let quality = 0.8;
+        let quality = 0.9;
         let result = canvas.toDataURL('image/jpeg', quality);
         
         console.log(`Initial processed image size: ${Math.round(result.length / 1024)}KB`);
         
-        // Reduce quality if file size is too large
-        if (result.length > 1000000) {
-          quality = 0.6;
+        if (result.length > 800000) {
+          quality = 0.7;
           result = canvas.toDataURL('image/jpeg', quality);
-          console.log(`Reduced quality to 0.6, new size: ${Math.round(result.length / 1024)}KB`);
+          console.log(`Reduced quality to 0.7, new size: ${Math.round(result.length / 1024)}KB`);
         }
         
         if (result.length > 500000) {
-          quality = 0.4;
+          quality = 0.5;
           result = canvas.toDataURL('image/jpeg', quality);
-          console.log(`Reduced quality to 0.4, new size: ${Math.round(result.length / 1024)}KB`);
+          console.log(`Reduced quality to 0.5, new size: ${Math.round(result.length / 1024)}KB`);
+        }
+        
+        if (result.length > 300000) {
+          const smallerCanvas = document.createElement('canvas');
+          smallerCanvas.width = Math.floor(width * 0.75);
+          smallerCanvas.height = Math.floor(height * 0.75);
+          const smallerCtx = smallerCanvas.getContext('2d');
+          smallerCtx?.drawImage(img, 0, 0, smallerCanvas.width, smallerCanvas.height);
+          result = smallerCanvas.toDataURL('image/jpeg', 0.5);
+          console.log(`Reduced dimensions and quality, final size: ${Math.round(result.length / 1024)}KB`);
         }
         
         resolve(result);
@@ -176,7 +183,7 @@ const SpeciesRecognition = () => {
     });
   };
   
-  // Process the image with AI
+  // Process the image with AI - improved error handling and user feedback
   const processImage = async () => {
     if (!capturedImage) return;
     
@@ -185,6 +192,11 @@ const SpeciesRecognition = () => {
     setSpeciesInfo(null);
     
     try {
+      toast({
+        title: "Processando imagem",
+        description: "Analisando imagem e identificando espécie. Isto pode levar alguns instantes...",
+      });
+      
       const processedImage = await preprocessImage(capturedImage);
       console.log("Image prepared for sending, size:", Math.round(processedImage.length / 1024), "KB");
       
@@ -192,7 +204,6 @@ const SpeciesRecognition = () => {
         throw new Error('Dados de imagem inválidos. Por favor, tente novamente com outra foto.');
       }
       
-      // Create payload with the processed image
       const payload = {
         image: processedImage
       };
@@ -268,13 +279,15 @@ const SpeciesRecognition = () => {
     };
   }, []);
   
-  // Function to format the description text with better spacing and formatting
+  // Enhanced description formatting for better readability
   const formatDescription = (text: string) => {
-    // Replace Markdown-style headers with HTML
     let formattedText = text
       .replace(/^# (.*$)/gim, '<h2 class="text-xl font-semibold text-nature-700 dark:text-nature-400 mt-4 mb-2">$1</h2>')
       .replace(/^## (.*$)/gim, '<h3 class="text-lg font-medium text-nature-600 dark:text-nature-500 mt-3 mb-1">$1</h3>')
       .replace(/^### (.*$)/gim, '<h4 class="text-md font-medium text-nature-600 dark:text-nature-500 mt-2 mb-1">$1</h4>')
+      .replace(/\*([^*]+)\*/g, '<em class="text-nature-600 dark:text-nature-400 font-italic">$1</em>')
+      .replace(/^\s*[\-\*]\s+(.+)$/gim, '<li class="ml-4 list-disc">$1</li>')
+      .replace(/\n\n/g, '<br /><br />')
       .replace(/\n/g, '<br />');
     
     return formattedText;
