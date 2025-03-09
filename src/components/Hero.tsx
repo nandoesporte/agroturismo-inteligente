@@ -24,6 +24,16 @@ const Hero = () => {
       image: 'https://images.unsplash.com/photo-1625592318868-c1e4aa2b3b33?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=2070&q=80',
       title: 'Paisagens Deslumbrantes',
       subtitle: 'Caminhos e trilhas para se conectar com a natureza'
+    },
+    {
+      image: 'https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1470&q=80',
+      title: 'Fazendas Históricas',
+      subtitle: 'Conheça a história e a cultura das fazendas centenárias do Paraná'
+    },
+    {
+      image: 'https://images.unsplash.com/photo-1500382017468-9049fed747ef?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1932&q=80',
+      title: 'Vida Rural Autêntica',
+      subtitle: 'Experiências genuínas de convivência com famílias rurais'
     }
   ];
 
