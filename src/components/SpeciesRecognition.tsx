@@ -294,32 +294,32 @@ const SpeciesRecognition = () => {
   };
   
   return (
-    <div className="w-full max-w-md mx-auto bg-white dark:bg-gray-800 rounded-xl shadow-md overflow-hidden p-5">
+    <div className="w-full max-w-md mx-auto bg-white dark:bg-gray-800 rounded-xl shadow-md overflow-hidden p-4 sm:p-5">
       <div className="flex justify-center mb-4">
-        <div className="flex space-x-1 bg-gray-100 dark:bg-gray-700 p-1 rounded-lg">
+        <div className="flex w-full max-w-[280px] bg-gray-100 dark:bg-gray-700 p-1 rounded-lg">
           <Button
             variant="ghost"
             size="sm"
             className={cn(
-              "rounded-md transition-colors",
+              "flex-1 rounded-md transition-colors text-xs sm:text-sm py-2 h-auto",
               captureMode === 'camera' && "bg-white dark:bg-gray-600 shadow-sm"
             )}
             onClick={() => switchMode('camera')}
           >
-            <Camera className="mr-2 h-4 w-4" />
-            Câmera
+            <Camera className="mr-1 sm:mr-2 h-3 w-3 sm:h-4 sm:w-4" />
+            <span>Câmera</span>
           </Button>
           <Button
             variant="ghost"
             size="sm"
             className={cn(
-              "rounded-md transition-colors",
+              "flex-1 rounded-md transition-colors text-xs sm:text-sm py-2 h-auto",
               captureMode === 'upload' && "bg-white dark:bg-gray-600 shadow-sm"
             )}
             onClick={() => switchMode('upload')}
           >
-            <Upload className="mr-2 h-4 w-4" />
-            Upload
+            <Upload className="mr-1 sm:mr-2 h-3 w-3 sm:h-4 sm:w-4" />
+            <span>Upload</span>
           </Button>
         </div>
       </div>
@@ -342,20 +342,25 @@ const SpeciesRecognition = () => {
               />
               <button
                 onClick={captureImage}
-                className="absolute bottom-4 left-1/2 transform -translate-x-1/2 bg-white dark:bg-gray-800 rounded-full p-3 shadow-lg"
+                className="absolute bottom-4 left-1/2 transform -translate-x-1/2 bg-white dark:bg-gray-800 rounded-full p-2 sm:p-3 shadow-lg"
                 aria-label="Capturar foto"
               >
-                <Aperture className="h-8 w-8 text-nature-600" />
+                <Aperture className="h-6 w-6 sm:h-8 sm:w-8 text-nature-600" />
               </button>
             </>
           ) : (
-            <div className="flex flex-col items-center justify-center h-full p-6 text-center">
-              <Camera className="h-12 w-12 text-gray-400 dark:text-gray-500 mb-2" />
-              <p className="text-gray-500 dark:text-gray-400 mb-4">
+            <div className="flex flex-col items-center justify-center h-full p-4 sm:p-6 text-center">
+              <Camera className="h-10 w-10 sm:h-12 sm:w-12 text-gray-400 dark:text-gray-500 mb-2" />
+              <p className="text-sm sm:text-base text-gray-500 dark:text-gray-400 mb-3 sm:mb-4 px-2">
                 Capture uma foto de planta ou animal para identificação
               </p>
-              <Button onClick={startCapture}>
-                Iniciar câmera
+              <Button 
+                onClick={startCapture}
+                size="sm"
+                className="px-3 py-1 h-auto sm:h-10 sm:px-4 sm:py-2"
+              >
+                <Camera className="mr-1 sm:mr-2 h-4 w-4" />
+                <span>Iniciar câmera</span>
               </Button>
             </div>
           )}
@@ -364,7 +369,7 @@ const SpeciesRecognition = () => {
       
       {captureMode === 'upload' && !capturedImage && (
         <div 
-          className="border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg p-8 mb-4 text-center cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors"
+          className="border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg p-4 sm:p-8 mb-4 text-center cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors"
           onClick={triggerFileInput}
         >
           <input
@@ -374,11 +379,11 @@ const SpeciesRecognition = () => {
             accept="image/*"
             className="hidden"
           />
-          <Upload className="mx-auto h-12 w-12 text-gray-400 dark:text-gray-500 mb-2" />
-          <p className="text-sm text-gray-500 dark:text-gray-400">
+          <Upload className="mx-auto h-10 w-10 sm:h-12 sm:w-12 text-gray-400 dark:text-gray-500 mb-2" />
+          <p className="text-xs sm:text-sm text-gray-500 dark:text-gray-400 px-1">
             Clique para selecionar uma imagem ou arraste e solte aqui
           </p>
-          <p className="text-xs text-gray-400 mt-2">
+          <p className="text-xs text-gray-400 mt-1 sm:mt-2 px-1">
             Formato: JPG, PNG. Tamanho máximo: 5MB
           </p>
         </div>
@@ -393,28 +398,29 @@ const SpeciesRecognition = () => {
               className="w-full h-full object-cover"
             />
           </div>
-          <div className="flex space-x-2 justify-center">
+          <div className="flex flex-col sm:flex-row gap-2 sm:gap-3">
             <Button
               variant="outline"
               onClick={resetComponent}
               disabled={isProcessing}
+              className="w-full sm:flex-1 py-2 h-auto text-sm"
             >
-              <RefreshCw className="mr-2 h-4 w-4" />
+              <RefreshCw className="mr-1.5 h-4 w-4" />
               Nova foto
             </Button>
             <Button
               onClick={processImage}
               disabled={isProcessing}
-              className="bg-nature-600 hover:bg-nature-700"
+              className="w-full sm:flex-1 bg-nature-600 hover:bg-nature-700 py-2 h-auto text-sm"
             >
               {isProcessing ? (
                 <>
-                  <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
+                  <RefreshCw className="mr-1.5 h-4 w-4 animate-spin" />
                   Analisando...
                 </>
               ) : (
                 <>
-                  <Leaf className="mr-2 h-4 w-4" />
+                  <Leaf className="mr-1.5 h-4 w-4" />
                   Identificar espécie
                 </>
               )}
