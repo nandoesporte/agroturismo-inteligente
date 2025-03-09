@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { cn } from '@/lib/utils';
 import { supabase } from '@/lib/supabase';
-import { toast } from 'sonner';
+import { toast } from '@/components/ui/use-toast';
 
 const SpeciesRecognition = () => {
   // States
@@ -79,7 +79,7 @@ const SpeciesRecognition = () => {
       const ctx = canvas.getContext('2d');
       if (ctx) {
         ctx.drawImage(videoRef.current, 0, 0);
-        const imageDataUrl = canvas.toDataURL('image/jpeg');
+        const imageDataUrl = canvas.toDataURL('image/jpeg', 0.9);
         setCapturedImage(imageDataUrl);
         stopCapture();
       }
@@ -119,12 +119,11 @@ const SpeciesRecognition = () => {
     setSpeciesInfo(null);
     
     try {
-      // Send the base64 image data directly to avoid form-data boundary issues
-      const imageBase64 = capturedImage.split(',')[1]; // Remove the data URL prefix
-      
-      // Send to Supabase edge function with JSON payload
+      // Send image as JSON
       const { data, error: functionError } = await supabase.functions.invoke('species-recognition', {
-        body: { image: capturedImage },
+        body: { 
+          image: capturedImage 
+        },
         headers: {
           'Content-Type': 'application/json',
         },
@@ -142,11 +141,19 @@ const SpeciesRecognition = () => {
       
       setSpeciesInfo(data);
       setDialogOpen(true);
-      toast.success('Espécie identificada com sucesso!');
+      toast({
+        title: "Sucesso!",
+        description: "Espécie identificada com sucesso!",
+        variant: "default",
+      });
     } catch (err) {
       console.error('Erro ao processar imagem:', err);
       setError('Ocorreu um erro ao analisar a imagem. Por favor, tente novamente.');
-      toast.error('Falha ao identificar espécie. Tente uma foto mais clara.');
+      toast({
+        title: "Erro",
+        description: "Falha ao identificar espécie. Tente uma foto mais clara.",
+        variant: "destructive",
+      });
     } finally {
       setIsProcessing(false);
     }

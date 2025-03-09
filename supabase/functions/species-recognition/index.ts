@@ -24,9 +24,18 @@ serve(async (req) => {
     let imageBase64 = "";
     
     if (contentType.includes("application/json")) {
-      // Handle JSON payload
-      const { image } = await req.json();
-      imageBase64 = image.replace(/^data:image\/[a-z]+;base64,/, "");
+      try {
+        // Handle JSON payload
+        const body = await req.json();
+        if (!body || !body.image) {
+          throw new Error("No image data provided in the JSON payload");
+        }
+        
+        imageBase64 = body.image.replace(/^data:image\/[a-z]+;base64,/, "");
+      } catch (jsonError) {
+        console.error("JSON parsing error:", jsonError);
+        throw new Error("Invalid JSON format: " + jsonError.message);
+      }
     } else {
       // Attempt to parse FormData
       try {
