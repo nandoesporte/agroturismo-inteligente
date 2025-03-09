@@ -1,7 +1,6 @@
+// Add any necessary imports here if needed
 
-import { supabase } from '@/lib/supabase';
-
-export type ExtractedProperty = {
+export interface ExtractedProperty {
   name?: string;
   description?: string;
   location?: string;
@@ -15,75 +14,90 @@ export type ExtractedProperty = {
     website?: string;
   };
   image?: string;
-};
+}
 
-export class FirecrawlService {
-  static async scrapeWebsite(url: string): Promise<{ 
+class FirecrawlServiceClass {
+  async scrapeWebsite(url: string): Promise<{ 
     success: boolean; 
-    properties?: ExtractedProperty[];
-    error?: string;
-    rawData?: any;
-    endpoint?: string;
+    properties?: ExtractedProperty[]; 
+    error?: string 
   }> {
     try {
-      console.log('Making scrape request to Llama AI Edge Function');
+      console.log(`Scraping website: ${url}`);
       
-      const { data, error } = await supabase.functions.invoke('firecrawl', {
-        body: { url }
+      const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/firecrawl`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`
+        },
+        body: JSON.stringify({ url })
       });
-
-      if (error) {
-        console.error('Scrape request failed:', error);
-        return { 
-          success: false, 
-          error: error.message || 'Failed to extract data from website' 
-        };
-      }
-
-      console.log('AI extraction successful using:', data.endpoint);
-      console.log('Properties found:', data.properties?.length || 0);
       
-      const properties = data.properties && data.properties.length > 0
-        ? data.properties.map((property: ExtractedProperty) => ({
-            ...property,
-            activities: property.activities || [],
-            amenities: property.amenities || [],
-            contact: property.contact || { phone: '', email: '', website: '' },
-            price: property.price ? this.formatPrice(property.price) : ''
-          }))
-        : [];
-        
-      return { 
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('Error from scrape API:', errorText);
+        throw new Error(`Error from scraping service: ${response.status} ${errorText}`);
+      }
+      
+      const data = await response.json();
+      
+      if (!data.success) {
+        console.error('Scraping was not successful:', data.error || 'Unknown error');
+        throw new Error(data.error || 'Falha na extração de dados');
+      }
+      
+      console.log('Scraped properties:', data.properties);
+      
+      // Process and normalize property data
+      const properties = this.normalizeProperties(data.properties || []);
+      
+      return {
         success: true,
-        properties,
-        rawData: data.rawData,
-        endpoint: data.endpoint
+        properties: properties
       };
+      
     } catch (error: any) {
-      console.error('Error during AI extraction:', error);
-      return { 
-        success: false, 
-        error: error instanceof Error ? error.message : 'Failed to connect to AI extraction service' 
+      console.error('Error in scrapeWebsite:', error);
+      return {
+        success: false,
+        error: error.message || 'Erro ao extrair dados do site'
       };
     }
   }
   
-  static formatPrice(priceStr: string): string {
-    return formatPrice(priceStr);
+  private normalizeProperties(properties: ExtractedProperty[]): ExtractedProperty[] {
+    return properties.map(property => {
+      // Clean and normalize price
+      let normalizedPrice = property.price || '';
+      // Keep original price format for display, but ensure it can be parsed later
+      
+      // Make sure arrays are actually arrays
+      const activities = Array.isArray(property.activities) 
+        ? property.activities 
+        : property.activities ? [property.activities] : [];
+        
+      const amenities = Array.isArray(property.amenities) 
+        ? property.amenities 
+        : property.amenities ? [property.amenities] : [];
+      
+      return {
+        name: property.name || 'Propriedade sem nome',
+        description: property.description || '',
+        location: property.location || 'Localização não informada',
+        price: normalizedPrice,
+        activities: activities.filter(a => a && a.trim() !== ''),
+        amenities: amenities.filter(a => a && a.trim() !== ''),
+        hours: property.hours || 'Não informado',
+        contact: {
+          phone: property.contact?.phone || 'Não informado',
+          email: property.contact?.email || '',
+          website: property.contact?.website || ''
+        },
+        image: property.image || ''
+      };
+    });
   }
 }
 
-function formatPrice(priceStr: string): string {
-  if (!priceStr) return '';
-  
-  const numberMatch = priceStr.match(/[\d.,]+/);
-  if (!numberMatch) return priceStr;
-  
-  const cleanNumber = numberMatch[0].replace(/[^\d.,]/g, '');
-  
-  const hasCurrency = /[R$€£¥]/.test(priceStr);
-  
-  if (hasCurrency) return priceStr;
-  
-  return `R$ ${cleanNumber}`;
-}
+export const FirecrawlService = new FirecrawlServiceClass();

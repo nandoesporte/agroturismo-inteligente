@@ -24,7 +24,7 @@ import {
 } from "@/components/ui/table";
 import { 
   Edit, Plus, Trash2, Image, Database, Phone, 
-  Mail, Clock, Home, Download, Loader2 
+  Mail, Clock, Home, Download, Loader2, FileSpreadsheet
 } from 'lucide-react';
 import { Checkbox } from '@/components/ui/checkbox';
 import { ScrapingTool } from '@/components/admin/ScrapingTool';
@@ -84,6 +84,7 @@ const AdminProperties = () => {
   const { toast } = useToast();
   const [importDialogOpen, setImportDialogOpen] = useState(false);
   const [importLoading, setImportLoading] = useState(false);
+  const [isImportingCustomList, setIsImportingCustomList] = useState(false);
 
   useEffect(() => {
     fetchProperties();
@@ -411,6 +412,98 @@ const AdminProperties = () => {
     }
   };
 
+  const handleImportCustomList = async () => {
+    setIsImportingCustomList(true);
+    
+    try {
+      const customProperties = [
+        {
+          name: "Ózera Hotel Fazenda",
+          location: "Prudentópolis",
+          price: 0,
+          image: "",
+          tags: ["Trilhas ecológicas", "observação de fauna e flora"],
+          amenities: ["Piscina coberta", "sauna", "restaurante"],
+          hours: "Não informado",
+          contact: {
+            phone: "Não informado",
+            email: "",
+            website: "https://www.booking.com/hotel/br/ozera-fazenda.pt-br.html"
+          },
+          is_featured: false
+        },
+        {
+          name: "Hotel Fazenda Itáytyba",
+          location: "Tibagi",
+          price: 0,
+          image: "",
+          tags: ["Trilhas", "passeios a cavalo", "atividades culturais"],
+          amenities: ["Piscina", "academia", "restaurante"],
+          hours: "Não informado",
+          contact: {
+            phone: "Não informado",
+            email: "",
+            website: "https://www.booking.com/hotel/br/itaytyba-ecoturismo-tibagi.pt-br.html"
+          },
+          is_featured: false
+        },
+        {
+          name: "Hotel Fazenda Vale Alvorada",
+          location: "Cascavel",
+          price: 0,
+          image: "",
+          tags: ["Trilhas", "pesca", "atividades ao ar livre"],
+          amenities: ["Piscina ao ar livre", "jardim", "bar"],
+          hours: "Não informado",
+          contact: {
+            phone: "Não informado",
+            email: "",
+            website: "https://www.booking.com/hotel/br/fazenda-vale-alvorada.pt-br.html"
+          },
+          is_featured: false
+        },
+        {
+          name: "Fazenda Monte Bello",
+          location: "Ribeirão Claro",
+          price: 0,
+          image: "",
+          tags: ["Visitas guiadas", "café da manhã colonial"],
+          amenities: ["Chalés para hospedagem", "produção de frutas"],
+          hours: "Não informado",
+          contact: {
+            phone: "Não informado",
+            email: "",
+            website: "https://pt.wikipedia.org/wiki/Fazenda_Monte_Bello"
+          },
+          is_featured: false
+        }
+      ];
+      
+      const { data, error } = await supabase
+        .from('properties')
+        .insert(customProperties)
+        .select();
+        
+      if (error) throw error;
+      
+      toast({
+        title: "Importação concluída",
+        description: `${customProperties.length} propriedades foram importadas com sucesso.`,
+      });
+      
+      fetchProperties();
+    } catch (error: any) {
+      console.error('Erro ao importar propriedades personalizadas:', error);
+      toast({
+        title: "Erro na importação",
+        description: error.message,
+        variant: "destructive",
+      });
+    } finally {
+      setIsImportingCustomList(false);
+    }
+  };
+
   return (
     <div className="p-4 md:p-6">
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
@@ -424,6 +517,24 @@ const AdminProperties = () => {
           </div>
           
           <div className="flex flex-col sm:flex-row gap-2">
+            <Button 
+              variant="outline" 
+              onClick={handleImportCustomList}
+              disabled={isImportingCustomList}
+            >
+              {isImportingCustomList ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Importando...
+                </>
+              ) : (
+                <>
+                  <FileSpreadsheet className="h-4 w-4 mr-2" /> 
+                  Importar Lista Fornecida
+                </>
+              )}
+            </Button>
+            
             <AlertDialog open={importDialogOpen} onOpenChange={setImportDialogOpen}>
               <AlertDialogTrigger asChild>
                 <Button variant="outline">

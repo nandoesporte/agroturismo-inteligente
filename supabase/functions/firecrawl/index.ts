@@ -1,4 +1,3 @@
-
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 
 const corsHeaders = {
@@ -74,41 +73,40 @@ serve(async (req) => {
       
       // Create a specialized prompt for the AI to extract structured data with our specific fields
       const prompt = `
-        You are an expert data extraction AI. I will give you HTML content from a tourism or property website, 
-        and I need you to extract structured information about properties, accommodations, or tourism experiences.
+        Você é um especialista em extração de dados. O seu trabalho é analisar o conteúdo de sites de turismo rural e propriedades rurais para extrair informações estruturadas.
         
-        Extract up to 5 properties or experiences you find. For each one, provide ONLY the following fields:
-        1. Name (string): Name of the property/experience
-        2. Location (string): Location of the property 
-        3. Price (string): Price information exactly as it appears (with currency symbol if present)
-        4. Image (string): URL of the main image for the property
-        5. Activities (array of strings): List of up to 5 activities available
-        6. Amenities (array of strings): List of up to 5 amenities like Wi-Fi, Parking, etc.
-        7. Hours (string): Operating hours information
-        8. Contact information:
-           - Phone (string): Phone number
-           - Email (string): Email address
-           - Website (string): Website URL
-        
-        Format your response as a valid JSON array of objects with these exact field names:
+        Extraia até 5 propriedades ou experiências que você encontrar. Para cada uma, forneça APENAS os seguintes campos:
+        1. Nome (string): Nome da propriedade/experiência
+        2. Localização (string): Localização da propriedade (cidade, estado)
+        3. Preço (string): Informação de preço exatamente como aparece (com símbolo de moeda se presente)
+        4. Image (string): URL da imagem principal da propriedade
+        5. Atividades (array de strings): Lista de até 5 atividades disponíveis
+        6. Comodidades (array de strings): Lista de até 5 comodidades como Wi-Fi, Estacionamento, etc.
+        7. Horário de Funcionamento (string): Informação sobre horários de funcionamento
+        8. Informações de contato:
+           - Telefone (string): Número de telefone
+           - Email (string): Endereço de e-mail
+           - Website (string): URL do site
+
+        Formate sua resposta como um JSON válido com exatamente esses nomes de campos:
         [
           {
-            "name": "Property Name",
-            "location": "Location details",
-            "price": "Price information", 
-            "image": "image url",
-            "activities": ["activity1", "activity2"],
-            "amenities": ["amenity1", "amenity2"],
-            "hours": "Operating hours information",
+            "name": "Nome da Propriedade",
+            "location": "Detalhes da localização",
+            "price": "Informação de preço", 
+            "image": "url da imagem",
+            "activities": ["atividade1", "atividade2"],
+            "amenities": ["comodidade1", "comodidade2"],
+            "hours": "Informação sobre horários",
             "contact": {
-              "phone": "phone number",
-              "email": "email address",
-              "website": "website url"
+              "phone": "número de telefone",
+              "email": "endereço de email",
+              "website": "url do website"
             }
           }
         ]
         
-        Only respond with the JSON. Do not include any explanations before or after the JSON.
+        Responda apenas com o JSON. Não inclua explicações antes ou depois do JSON.
       `;
       
       console.log("Sending request to GROQ API for extraction");
