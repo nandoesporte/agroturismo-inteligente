@@ -201,7 +201,7 @@ const SpeciesRecognition = () => {
         throw new Error('Dados de imagem inválidos. Por favor, tente novamente com outra foto.');
       }
       
-      // Create payload with the image data, ensuring it's properly formatted
+      // Create JSON payload with the image data
       const payload = {
         image: processedImage
       };
@@ -210,9 +210,14 @@ const SpeciesRecognition = () => {
       const payloadString = JSON.stringify(payload);
       console.log("Payload string length:", payloadString.length);
       
-      // Use the Supabase Edge Function for species recognition
+      // Ensure payload is not empty
+      if (!payloadString || payloadString.length < 100) {
+        throw new Error('Dados de payload inválidos. Por favor, tente novamente.');
+      }
+      
+      // Use the Supabase Edge Function for species recognition with explicit content type
       const { data, error: functionError } = await supabase.functions.invoke('species-recognition', {
-        body: payloadString,
+        body: payload,
         headers: {
           'Content-Type': 'application/json',
         },

@@ -21,48 +21,54 @@ serve(async (req) => {
 
     console.log("Request received for species recognition");
     
-    // Detailed request debugging
-    const contentType = req.headers.get("content-type") || "";
-    console.log("Content type:", contentType);
-    
+    // Enhanced request body handling
     let imageBase64 = "";
     let requestBody;
     
     try {
-      // Read the request body as text first
-      const bodyText = await req.text();
-      console.log("Raw request body length:", bodyText.length);
+      // Check content-type header and process appropriately
+      const contentType = req.headers.get("content-type") || "";
+      console.log("Content type:", contentType);
       
-      if (!bodyText || bodyText.trim() === '') {
-        throw new Error("Empty request body");
-      }
-      
-      // Try to parse as JSON
-      try {
-        requestBody = JSON.parse(bodyText);
-        console.log("Request body parsed successfully");
+      if (contentType.includes("application/json")) {
+        // Process JSON request
+        const rawBody = await req.text();
+        console.log("Raw body length:", rawBody.length);
         
-        if (!requestBody.image) {
-          throw new Error("No image field in request body");
+        if (!rawBody || rawBody.trim() === '') {
+          console.error("Empty request body detected");
+          throw new Error("Empty request body received");
+        }
+        
+        try {
+          requestBody = JSON.parse(rawBody);
+          console.log("Request body parsed as JSON successfully");
+        } catch (parseError) {
+          console.error("JSON parse error:", parseError.message);
+          throw new Error(`Invalid JSON format: ${parseError.message}`);
+        }
+        
+        if (!requestBody || !requestBody.image) {
+          console.error("No image data in request body");
+          throw new Error("Missing image data in request");
         }
         
         imageBase64 = requestBody.image.replace(/^data:image\/[a-z]+;base64,/, "");
-        console.log("Image base64 extracted, length:", imageBase64.length);
-      } catch (parseError) {
-        console.error("JSON parsing error:", parseError.message);
-        throw new Error("Invalid JSON format: " + parseError.message);
+      } else {
+        console.error("Unsupported content type:", contentType);
+        throw new Error(`Unsupported content type: ${contentType}. Expected application/json`);
       }
     } catch (bodyError) {
-      console.error("Error processing request body:", bodyError.message);
-      throw new Error("Failed to process request body: " + bodyError.message);
+      console.error("Body processing error:", bodyError.message);
+      throw bodyError;
     }
     
     if (!imageBase64 || imageBase64.length < 100) {
-      console.error("Invalid or missing image data, length:", imageBase64 ? imageBase64.length : 0);
-      throw new Error("Missing or invalid image data");
+      console.error("Invalid image data, length:", imageBase64?.length || 0);
+      throw new Error("Invalid image data. Please provide a valid base64 encoded image");
     }
     
-    console.log("Processing image with vision model");
+    console.log("Image data extracted successfully, length:", imageBase64.length);
     const dataUri = `data:image/jpeg;base64,${imageBase64}`;
 
     // Use LLaVA or similar vision model to identify the species
