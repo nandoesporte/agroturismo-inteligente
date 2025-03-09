@@ -1,9 +1,11 @@
+
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardFooter } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Star, MapPin } from 'lucide-react';
+import { Star, MapPin, MessageCircle } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Link } from 'react-router-dom';
+import { Button } from "@/components/ui/button";
 
 export interface Property {
   id: string;
@@ -24,6 +26,7 @@ export interface Property {
     email?: string;
     website?: string;
     address?: string;
+    whatsapp?: string;
   };
   images?: string[];
 }
@@ -85,8 +88,8 @@ const PropertyCard = ({
             <span className="text-gray-500 text-xs ml-1">({property.reviewCount} avaliações)</span>
           </div>
         </CardContent>
-        <CardFooter className="px-4 pb-4 pt-2">
-          <div className="flex justify-between items-center">
+        <CardFooter className="px-4 pb-4 pt-2 flex flex-col gap-2">
+          <div className="flex justify-between items-center w-full">
             <span className="text-nature-700 font-semibold text-lg">R$ {property.price.toFixed(2)}</span>
             <div className="flex space-x-2">
               {property.tags.slice(0, 2).map((tag) => (
@@ -96,6 +99,23 @@ const PropertyCard = ({
               ))}
             </div>
           </div>
+          {property.contact?.whatsapp && (
+            <a 
+              href={`https://wa.me/${property.contact.whatsapp.replace(/\D/g, '')}`}
+              target="_blank" 
+              rel="noopener noreferrer"
+              className="w-full"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <Button 
+                className="w-full bg-green-600 hover:bg-green-700 text-white flex items-center justify-center gap-2"
+                onClick={(e) => e.stopPropagation()}
+              >
+                <MessageCircle className="h-4 w-4" />
+                Agendar via WhatsApp
+              </Button>
+            </a>
+          )}
         </CardFooter>
       </Link>
     </Card>

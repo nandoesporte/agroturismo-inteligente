@@ -24,7 +24,8 @@ import {
 } from "@/components/ui/table";
 import { 
   Edit, Plus, Trash2, Image, Database, Phone, 
-  Mail, Clock, Home, Download, Loader2, FileSpreadsheet
+  Mail, Clock, Home, Download, Loader2, FileSpreadsheet,
+  MessageCircle, Upload, X
 } from 'lucide-react';
 import { Checkbox } from '@/components/ui/checkbox';
 import { ScrapingTool } from '@/components/admin/ScrapingTool';
@@ -59,6 +60,7 @@ const AdminProperties = () => {
     contact_phone: '',
     contact_email: '',
     contact_website: '',
+    contact_whatsapp: '',
     is_featured: false
   });
   const [activeTab, setActiveTab] = useState("properties");
@@ -66,6 +68,8 @@ const AdminProperties = () => {
   const [importDialogOpen, setImportDialogOpen] = useState(false);
   const [importLoading, setImportLoading] = useState(false);
   const [isImportingCustomList, setIsImportingCustomList] = useState(false);
+  const [imageUploadLoading, setImageUploadLoading] = useState(false);
+  const [imageFile, setImageFile] = useState<File | null>(null);
 
   useEffect(() => {
     fetchProperties();
@@ -111,6 +115,75 @@ const AdminProperties = () => {
     setFormData(prev => ({ ...prev, is_featured: checked }));
   };
 
+  const handleImageFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0]) {
+      setImageFile(e.target.files[0]);
+    }
+  };
+
+  const uploadImage = async () => {
+    if (!imageFile) return;
+    
+    setImageUploadLoading(true);
+    
+    try {
+      const fileName = `${Date.now()}-${imageFile.name.replace(/\s+/g, '-').toLowerCase()}`;
+      
+      const { data, error } = await supabase.storage
+        .from('properties')
+        .upload(fileName, imageFile);
+      
+      if (error) throw error;
+      
+      const { data: urlData } = supabase.storage
+        .from('properties')
+        .getPublicUrl(fileName);
+      
+      const newImages = [...formData.images, urlData.publicUrl];
+      setFormData(prev => ({ ...prev, images: newImages }));
+      
+      if (!formData.image) {
+        setFormData(prev => ({ ...prev, image: urlData.publicUrl }));
+      }
+      
+      setImageFile(null);
+      
+      toast({
+        title: "Imagem carregada",
+        description: "A imagem foi carregada com sucesso.",
+      });
+    } catch (error: any) {
+      console.error('Erro ao carregar imagem:', error);
+      toast({
+        title: "Erro ao carregar imagem",
+        description: error.message,
+        variant: "destructive",
+      });
+    } finally {
+      setImageUploadLoading(false);
+    }
+  };
+
+  const handleRemoveImage = (index: number) => {
+    const newImages = [...formData.images];
+    newImages.splice(index, 1);
+    setFormData(prev => ({ ...prev, images: newImages }));
+    
+    if (formData.image === formData.images[index] && newImages.length > 0) {
+      setFormData(prev => ({ ...prev, image: newImages[0] }));
+    } else if (formData.image === formData.images[index] && newImages.length === 0) {
+      setFormData(prev => ({ ...prev, image: '' }));
+    }
+  };
+
+  const setAsMainImage = (imageUrl: string) => {
+    setFormData(prev => ({ ...prev, image: imageUrl }));
+    toast({
+      title: "Imagem principal definida",
+      description: "A imagem foi definida como principal.",
+    });
+  };
+
   const handleEdit = (property: Property) => {
     setEditingProperty(property);
     setFormData({
@@ -125,6 +198,7 @@ const AdminProperties = () => {
       contact_phone: property.contact?.phone || '',
       contact_email: property.contact?.email || '',
       contact_website: property.contact?.website || '',
+      contact_whatsapp: property.contact?.whatsapp || '',
       is_featured: property.isFeatured || false
     });
     setOpenDialog(true);
@@ -150,7 +224,8 @@ const AdminProperties = () => {
         contact: {
           phone: formData.contact_phone.trim(),
           email: formData.contact_email.trim(),
-          website: formData.contact_website.trim()
+          website: formData.contact_website.trim(),
+          whatsapp: formData.contact_whatsapp.trim()
         },
         is_featured: formData.is_featured
       };
@@ -235,6 +310,7 @@ const AdminProperties = () => {
       contact_phone: '',
       contact_email: '',
       contact_website: '',
+      contact_whatsapp: '',
       is_featured: false
     });
   };
@@ -252,6 +328,7 @@ const AdminProperties = () => {
       contact_phone: property.contact?.phone || '',
       contact_email: property.contact?.email || '',
       contact_website: property.contact?.website || '',
+      contact_whatsapp: property.contact?.whatsapp || '',
       is_featured: property.is_featured || false
     });
     setOpenDialog(true);
@@ -617,32 +694,78 @@ const AdminProperties = () => {
                           required
                         />
                       </div>
+                      
                       <div className="col-span-1 md:col-span-2">
-                        <Label htmlFor="image">URL da Imagem Principal</Label>
-                        <div className="flex gap-2 flex-col sm:flex-row">
+                        <Label htmlFor="image">Imagens da Propriedade</Label>
+                        
+                        <div className="flex gap-2 flex-col sm:flex-row mb-3">
                           <Input
-                            id="image"
-                            name="image"
-                            value={formData.image}
-                            onChange={handleInputChange}
-                            placeholder="https://example.com/image.jpg"
+                            id="image-upload"
+                            type="file"
+                            accept="image/*"
+                            onChange={handleImageFileChange}
+                            className="flex-grow"
                           />
-                          <Button type="button" variant="outline" className="flex-shrink-0">
-                            <Image className="h-4 w-4 mr-2" />
-                            Upload
+                          <Button 
+                            type="button" 
+                            onClick={uploadImage} 
+                            disabled={!imageFile || imageUploadLoading}
+                            className="flex-shrink-0"
+                          >
+                            {imageUploadLoading ? (
+                              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                            ) : (
+                              <Upload className="h-4 w-4 mr-2" />
+                            )}
+                            Enviar Imagem
                           </Button>
                         </div>
+                        
+                        {formData.images.length > 0 && (
+                          <div className="mt-3">
+                            <Label className="mb-2 block">Imagens atuais</Label>
+                            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+                              {formData.images.map((img, index) => (
+                                <div key={index} className="relative group border rounded-md overflow-hidden">
+                                  <img 
+                                    src={img} 
+                                    alt={`Imagem ${index + 1}`} 
+                                    className={`w-full h-28 object-cover ${formData.image === img ? 'ring-2 ring-nature-600' : ''}`}
+                                  />
+                                  <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
+                                    {formData.image !== img && (
+                                      <Button
+                                        type="button"
+                                        variant="outline"
+                                        size="sm"
+                                        className="bg-white text-gray-800 hover:bg-gray-100"
+                                        onClick={() => setAsMainImage(img)}
+                                      >
+                                        <Home className="h-4 w-4" />
+                                      </Button>
+                                    )}
+                                    <Button
+                                      type="button"
+                                      variant="outline"
+                                      size="sm"
+                                      className="bg-white text-red-600 hover:bg-red-50"
+                                      onClick={() => handleRemoveImage(index)}
+                                    >
+                                      <X className="h-4 w-4" />
+                                    </Button>
+                                  </div>
+                                  {formData.image === img && (
+                                    <div className="absolute bottom-0 left-0 right-0 bg-nature-600 text-white text-xs px-1 py-0.5 text-center">
+                                      Principal
+                                    </div>
+                                  )}
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        )}
                       </div>
-                      <div className="col-span-1 md:col-span-2">
-                        <Label htmlFor="additionalImages">Imagens Adicionais (uma URL por linha)</Label>
-                        <Textarea
-                          id="additionalImages"
-                          value={formData.images.join('\n')}
-                          onChange={handleImagesChange}
-                          placeholder="https://example.com/image1.jpg&#10;https://example.com/image2.jpg"
-                          className="h-24"
-                        />
-                      </div>
+                      
                       <div className="col-span-1">
                         <Label htmlFor="tags">Atividades (separadas por vírgula)</Label>
                         <Input
@@ -676,7 +799,7 @@ const AdminProperties = () => {
                       
                       <div className="col-span-1 md:col-span-2">
                         <h3 className="text-sm font-medium mb-2">Informações de Contato</h3>
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                           <div>
                             <Label htmlFor="contact_phone">Telefone</Label>
                             <div className="flex">
@@ -690,6 +813,22 @@ const AdminProperties = () => {
                                 onChange={handleInputChange}
                                 className="rounded-l-none"
                                 placeholder="(42) 9999-9999"
+                              />
+                            </div>
+                          </div>
+                          <div>
+                            <Label htmlFor="contact_whatsapp">WhatsApp</Label>
+                            <div className="flex">
+                              <span className="inline-flex items-center px-3 rounded-l-md border border-r-0 border-input bg-muted text-muted-foreground">
+                                <MessageCircle className="h-4 w-4" />
+                              </span>
+                              <Input
+                                id="contact_whatsapp"
+                                name="contact_whatsapp"
+                                value={formData.contact_whatsapp}
+                                onChange={handleInputChange}
+                                className="rounded-l-none"
+                                placeholder="55429999999"
                               />
                             </div>
                           </div>
