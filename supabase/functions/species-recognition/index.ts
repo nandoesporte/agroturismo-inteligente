@@ -14,15 +14,10 @@ serve(async (req) => {
   }
 
   try {
-    const GROQ_API_KEY = Deno.env.get('GROQ_API_KEY');
-    const GOOGLE_API_KEY = Deno.env.get('GOOGLE_API_KEY');
+    const OPENAI_API_KEY = Deno.env.get('OPENAI_API_KEY');
     
-    if (!GROQ_API_KEY) {
-      throw new Error("Missing GROQ API key");
-    }
-    
-    if (!GOOGLE_API_KEY) {
-      throw new Error("Missing Google API key");
+    if (!OPENAI_API_KEY) {
+      throw new Error("Missing OpenAI API key");
     }
 
     console.log("Request received for species recognition");
@@ -74,33 +69,39 @@ serve(async (req) => {
     console.log("Image data prepared for processing, length:", imageBase64.length);
     const dataUri = `data:image/jpeg;base64,${imageBase64}`;
 
-    // Use the Google Gemini Pro Vision model via API with improved prompt
-    console.log("Sending image to Google Gemini API for species identification");
-    const visionResponse = await fetch("https://generativelanguage.googleapis.com/v1beta/models/gemini-pro-vision:generateContent?key=" + GOOGLE_API_KEY, {
+    // Step 1: Use OpenAI GPT-3.5-turbo with vision capabilities to identify the species
+    console.log("Sending image to OpenAI for species identification");
+    const visionResponse = await fetch("https://api.openai.com/v1/chat/completions", {
       method: "POST",
       headers: {
-        "Content-Type": "application/json"
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${OPENAI_API_KEY}`
       },
       body: JSON.stringify({
-        contents: [
+        model: "gpt-3.5-turbo",
+        messages: [
           {
-            parts: [
+            role: "system",
+            content: "Você é um biólogo especialista em identificação de espécies com foco em biodiversidade brasileira. Analise a descrição detalhada da imagem e identifique a espécie com a maior precisão possível. Forneça APENAS o nome científico (em itálico) e o nome popular em português do Brasil. Responda no formato 'Nome científico (Nome popular)'. Se não conseguir identificar com certeza, indique a família ou gênero mais provável e mencione características visíveis importantes para identificação."
+          },
+          {
+            role: "user",
+            content: [
               {
-                text: "Você é um biólogo especialista em identificação de espécies com foco em biodiversidade brasileira. Analise esta imagem detalhadamente e identifique a espécie com a maior precisão possível. Forneça APENAS o nome científico (em itálico) e o nome popular em português do Brasil. Responda no formato 'Nome científico (Nome popular)'. Se não conseguir identificar com certeza, indique a família ou gênero mais provável e mencione características visíveis importantes para identificação."
+                type: "text",
+                text: "Identifique esta espécie com o formato solicitado:"
               },
               {
-                inline_data: {
-                  mime_type: "image/jpeg",
-                  data: imageBase64
+                type: "image_url",
+                image_url: {
+                  url: dataUri
                 }
               }
             ]
           }
         ],
-        generationConfig: {
-          temperature: 0.1,
-          maxOutputTokens: 150,
-        }
+        max_tokens: 150,
+        temperature: 0.1
       })
     });
 
@@ -116,8 +117,8 @@ serve(async (req) => {
     // Extract the species identification from the response with better error handling
     let speciesIdentification = "";
     try {
-      if (visionData.candidates && visionData.candidates.length > 0) {
-        speciesIdentification = visionData.candidates[0].content.parts[0].text.trim();
+      if (visionData.choices && visionData.choices.length > 0) {
+        speciesIdentification = visionData.choices[0].message.content.trim();
         console.log("Species identified:", speciesIdentification);
       } else if (visionData.error) {
         throw new Error(`API error: ${visionData.error.message || JSON.stringify(visionData.error)}`);
@@ -129,16 +130,16 @@ serve(async (req) => {
       speciesIdentification = "Espécie não identificada. Por favor, tente com uma imagem mais clara.";
     }
 
-    // Step 2: Generate detailed description using llama3-8b-8192
-    console.log("Generating detailed description using llama3-8b-8192");
-    const descriptionResponse = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+    // Step 2: Generate detailed description using GPT-3.5-Turbo
+    console.log("Generating detailed description using GPT-3.5-Turbo");
+    const descriptionResponse = await fetch("https://api.openai.com/v1/chat/completions", {
       method: "POST",
       headers: {
-        "Authorization": `Bearer ${GROQ_API_KEY}`,
+        "Authorization": `Bearer ${OPENAI_API_KEY}`,
         "Content-Type": "application/json"
       },
       body: JSON.stringify({
-        model: "llama3-8b-8192",
+        model: "gpt-3.5-turbo",
         messages: [
           {
             role: "system", 
