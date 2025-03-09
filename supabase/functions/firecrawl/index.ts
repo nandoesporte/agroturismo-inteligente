@@ -48,8 +48,8 @@ serve(async (req) => {
 
     console.log(`Scraping data from URL: ${url}`);
 
-    // Call Firecrawl API to extract data - Using the official endpoint format
-    const firecrawlUrl = "https://api.firecrawl.dev/crawl";
+    // Using the API endpoint according to docs: https://docs.firecrawl.dev/introduction
+    const firecrawlUrl = "https://api.firecrawl.dev/extract";
     console.log(`Making request to Firecrawl API endpoint: ${firecrawlUrl}`);
     
     const firecrawlResponse = await fetch(firecrawlUrl, {
@@ -60,20 +60,31 @@ serve(async (req) => {
       },
       body: JSON.stringify({
         url: url,
-        limit: 5,
-        extractors: {
+        selectors: {
           properties: {
             selector: "div.property-card, div.listing-item, article.property, .property-listing, .destination-item, .product-card, .tour-item, .accommodation-item, .card, .item, .product",
             type: "list",
-            extract: {
-              name: { selector: "h1, h2, h3, h4, .title, .name, .heading" },
-              description: { selector: "p, .description, .excerpt, .summary, .text" },
-              location: { selector: ".location, .address, .place, .region" },
-              price: { selector: ".price, .cost, .value" },
-              image: { selector: "img", attribute: "src" },
-              contactPhone: { selector: ".phone, [href^='tel:'], .telephone, .contact" },
-              contactEmail: { selector: ".email, [href^='mailto:']" },
-              contactWebsite: { selector: "a.website, a.site, .external-link, a[href^='http']", attribute: "href" }
+            properties: {
+              name: "h1, h2, h3, h4, .title, .name, .heading",
+              description: "p, .description, .excerpt, .summary, .text",
+              location: ".location, .address, .place, .region",
+              price: ".price, .cost, .value",
+              image: {
+                selector: "img",
+                type: "attribute",
+                attribute: "src"
+              },
+              contact: {
+                properties: {
+                  phone: ".phone, [href^='tel:'], .telephone, .contact",
+                  email: ".email, [href^='mailto:']",
+                  website: {
+                    selector: "a.website, a.site, .external-link, a[href^='http']",
+                    type: "attribute",
+                    attribute: "href"
+                  }
+                }
+              }
             }
           }
         }
@@ -86,14 +97,63 @@ serve(async (req) => {
       console.error("Status code:", firecrawlResponse.status);
       console.error("Status text:", firecrawlResponse.statusText);
       
-      // Try a fallback endpoint structure if first attempt fails
-      if (firecrawlResponse.status === 404) {
-        console.log("Attempting fallback API endpoint...");
+      // Try the alternative endpoint format as per documentation
+      console.log("Attempting alternative API endpoint...");
+      
+      const alternativeUrl = "https://api.firecrawl.dev/api/v1/extract";
+      console.log(`Making alternative request to: ${alternativeUrl}`);
+      
+      const alternativeResponse = await fetch(alternativeUrl, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${FIRECRAWL_API_KEY}`
+        },
+        body: JSON.stringify({
+          url: url,
+          selectors: {
+            properties: {
+              selector: "div.property-card, div.listing-item, article.property, .property-listing, .destination-item, .product-card, .tour-item, .accommodation-item, .card, .item, .product",
+              type: "list",
+              properties: {
+                name: "h1, h2, h3, h4, .title, .name, .heading",
+                description: "p, .description, .excerpt, .summary, .text",
+                location: ".location, .address, .place, .region",
+                price: ".price, .cost, .value",
+                image: {
+                  selector: "img",
+                  type: "attribute",
+                  attribute: "src"
+                },
+                contact: {
+                  properties: {
+                    phone: ".phone, [href^='tel:'], .telephone, .contact",
+                    email: ".email, [href^='mailto:']",
+                    website: {
+                      selector: "a.website, a.site, .external-link, a[href^='http']",
+                      type: "attribute",
+                      attribute: "href"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        })
+      });
+      
+      if (!alternativeResponse.ok) {
+        const alternativeError = await alternativeResponse.text();
+        console.error("Alternative API error:", alternativeError);
+        console.error("Alternative status code:", alternativeResponse.status);
         
-        const fallbackUrl = "https://api.firecrawl.dev/api/v1/extract";
-        console.log(`Making fallback request to: ${fallbackUrl}`);
+        // One more attempt with the v2 endpoint as per latest docs
+        console.log("Attempting v2 API endpoint...");
         
-        const fallbackResponse = await fetch(fallbackUrl, {
+        const v2Url = "https://api.firecrawl.dev/api/v2/extract";
+        console.log(`Making v2 request to: ${v2Url}`);
+        
+        const v2Response = await fetch(v2Url, {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
@@ -132,44 +192,24 @@ serve(async (req) => {
           })
         });
         
-        if (!fallbackResponse.ok) {
-          const fallbackError = await fallbackResponse.text();
-          console.error("Fallback API error:", fallbackError);
-          console.error("Fallback status code:", fallbackResponse.status);
-          throw new Error(`Firecrawl API error: All endpoints failed. Last error: ${fallbackError}`);
+        if (!v2Response.ok) {
+          const v2Error = await v2Response.text();
+          console.error("V2 API error:", v2Error);
+          throw new Error(`Firecrawl API error: All endpoints failed. Last error: ${v2Error}`);
         }
         
-        const fallbackData = await fallbackResponse.json();
-        console.log("Received fallback response:", JSON.stringify(fallbackData, null, 2));
+        const v2Data = await v2Response.json();
+        console.log("Received v2 response:", JSON.stringify(v2Data, null, 2));
         
-        // Process and clean the extracted data from fallback
-        const extractedProperties: ExtractedProperty[] = [];
-        
-        if (fallbackData && fallbackData.properties && Array.isArray(fallbackData.properties)) {
-          fallbackData.properties.forEach((prop: any) => {
-            const property: ExtractedProperty = {
-              name: prop.name || '',
-              description: prop.description || '',
-              location: prop.location || '',
-              price: prop.price || '',
-              image: prop.image || '',
-              contact: {
-                phone: prop.contact?.phone || '',
-                email: prop.contact?.email || '',
-                website: prop.contact?.website || ''
-              }
-            };
-            
-            extractedProperties.push(property);
-          });
-        }
+        // Process and clean the extracted data from v2
+        const extractedProperties: ExtractedProperty[] = processResponseData(v2Data);
         
         return new Response(
           JSON.stringify({ 
             success: true, 
             properties: extractedProperties,
-            rawData: fallbackData,
-            endpoint: "fallback"
+            rawData: v2Data,
+            endpoint: "v2"
           }),
           { 
             headers: { ...corsHeaders, "Content-Type": "application/json" } 
@@ -177,37 +217,30 @@ serve(async (req) => {
         );
       }
       
-      throw new Error(`Firecrawl API error: ${errorText}`);
+      const alternativeData = await alternativeResponse.json();
+      console.log("Received alternative response:", JSON.stringify(alternativeData, null, 2));
+      
+      // Process and clean the extracted data from alternative
+      const extractedProperties: ExtractedProperty[] = processResponseData(alternativeData);
+      
+      return new Response(
+        JSON.stringify({ 
+          success: true, 
+          properties: extractedProperties,
+          rawData: alternativeData,
+          endpoint: "alternative"
+        }),
+        { 
+          headers: { ...corsHeaders, "Content-Type": "application/json" } 
+        }
+      );
     }
 
     const data = await firecrawlResponse.json();
     console.log("Received response from Firecrawl API:", JSON.stringify(data, null, 2));
 
     // Process and clean the extracted data
-    const extractedProperties: ExtractedProperty[] = [];
-    
-    if (data && data.results && Array.isArray(data.results)) {
-      data.results.forEach((item: any) => {
-        if (item.properties && Array.isArray(item.properties)) {
-          item.properties.forEach((prop: any) => {
-            const property: ExtractedProperty = {
-              name: prop.name || '',
-              description: prop.description || '',
-              location: prop.location || '',
-              price: prop.price || '',
-              image: prop.image || '',
-              contact: {
-                phone: prop.contactPhone || '',
-                email: prop.contactEmail || '',
-                website: prop.contactWebsite || ''
-              }
-            };
-            
-            extractedProperties.push(property);
-          });
-        }
-      });
-    }
+    const extractedProperties: ExtractedProperty[] = processResponseData(data);
 
     return new Response(
       JSON.stringify({ 
@@ -231,3 +264,71 @@ serve(async (req) => {
     );
   }
 });
+
+// Helper function to process different response structures
+function processResponseData(data: any): ExtractedProperty[] {
+  const extractedProperties: ExtractedProperty[] = [];
+  
+  // Handle different response formats that might be returned by different API versions
+  if (data && data.properties && Array.isArray(data.properties)) {
+    // Handle v1/alternative endpoint format
+    data.properties.forEach((prop: any) => {
+      const property: ExtractedProperty = {
+        name: prop.name || '',
+        description: prop.description || '',
+        location: prop.location || '',
+        price: prop.price || '',
+        image: prop.image || '',
+        contact: {
+          phone: prop.contact?.phone || '',
+          email: prop.contact?.email || '',
+          website: prop.contact?.website || ''
+        }
+      };
+      
+      extractedProperties.push(property);
+    });
+  } else if (data && data.results && Array.isArray(data.results)) {
+    // Handle primary endpoint format
+    data.results.forEach((item: any) => {
+      if (item.properties && Array.isArray(item.properties)) {
+        item.properties.forEach((prop: any) => {
+          const property: ExtractedProperty = {
+            name: prop.name || '',
+            description: prop.description || '',
+            location: prop.location || '',
+            price: prop.price || '',
+            image: prop.image || '',
+            contact: {
+              phone: prop.contactPhone || '',
+              email: prop.contactEmail || '',
+              website: prop.contactWebsite || ''
+            }
+          };
+          
+          extractedProperties.push(property);
+        });
+      }
+    });
+  } else if (data && data.data && Array.isArray(data.data)) {
+    // Handle a possible v2 format where data is nested under a data key
+    data.data.forEach((prop: any) => {
+      const property: ExtractedProperty = {
+        name: prop.name || prop.title || '',
+        description: prop.description || prop.content || '',
+        location: prop.location || prop.address || '',
+        price: prop.price || '',
+        image: prop.image || prop.thumbnail || '',
+        contact: {
+          phone: prop.contact?.phone || prop.phone || '',
+          email: prop.contact?.email || prop.email || '',
+          website: prop.contact?.website || prop.website || ''
+        }
+      };
+      
+      extractedProperties.push(property);
+    });
+  }
+  
+  return extractedProperties;
+}

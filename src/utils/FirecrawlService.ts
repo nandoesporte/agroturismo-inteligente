@@ -21,6 +21,7 @@ export class FirecrawlService {
     properties?: ExtractedProperty[];
     error?: string;
     rawData?: any;
+    endpoint?: string;
   }> {
     try {
       console.log('Making scrape request to Firecrawl Edge Function');
@@ -37,11 +38,14 @@ export class FirecrawlService {
         };
       }
 
-      console.log('Scrape successful:', data);
+      console.log('Scrape successful using endpoint:', data.endpoint);
+      console.log('Properties found:', data.properties?.length || 0);
+      
       return { 
         success: true,
         properties: data.properties,
-        rawData: data.rawData
+        rawData: data.rawData,
+        endpoint: data.endpoint
       };
     } catch (error: any) {
       console.error('Error during scraping:', error);
