@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
@@ -125,7 +124,7 @@ export const ScrapingTool: React.FC<ScrapingToolProps> = ({ onImportProperty }) 
       const formattedProperty = {
         name: property.name || '',
         location: property.location || '',
-        price: property.price ? parseFloat(property.price.replace(/[^\d.,]/g, '')) || 0 : 0,
+        price: property.price ? parseFloat(property.price.replace(/[^\d.,]/g, '').replace(',', '.')) || 0 : 0,
         image: property.image || '',
         tags: property.activities || [],
         amenities: property.amenities || [],

@@ -123,7 +123,7 @@ serve(async (req) => {
         body: JSON.stringify({
           model: "llama3-8b-8192",
           messages: [
-            { role: "user", content: prompt }
+            { role: "user", content: prompt + "\n\nHere is the content to extract from:\n\n" + truncatedContent }
           ],
           temperature: 0.2, // Lower temperature for more consistent structured output
           max_tokens: 3000
