@@ -9,7 +9,13 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
-import { Plus, Undo2, Check, X } from 'lucide-react';
+import { Plus, Undo2, Check, X, ExternalLink, Phone, Mail, Info } from 'lucide-react';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 const predefinedUrls = [
   { name: "Paraná Turismo", url: "https://www.turismo.pr.gov.br/" },
@@ -20,6 +26,8 @@ const predefinedUrls = [
   { name: "Vinícola Durigan", url: "https://www.vinicoladurigan.com.br/" },
   { name: "Fazenda Capoava", url: "https://www.fazendacapoava.com.br/" },
   { name: "Caminhos do Vinho", url: "https://www.caminhosdovinho.org.br/" },
+  { name: "Circuito das Frutas SP", url: "https://circuitodasfrutas.com.br/" },
+  { name: "Circuito das Águas MG", url: "https://circuitodasaguaspaulista.sp.gov.br/" },
 ];
 
 interface ScrapingToolProps {
@@ -35,6 +43,7 @@ export const ScrapingTool: React.FC<ScrapingToolProps> = ({ onImportProperty }) 
   const [scrapedProperties, setScrapedProperties] = useState<ExtractedProperty[]>([]);
   const [selectedProperties, setSelectedProperties] = useState<Record<number, boolean>>({});
   const [activeTab, setActiveTab] = useState("predefined");
+  const [currentTab, setCurrentTab] = useState<string>("predefined");
 
   const handleUrlSelect = (url: string) => {
     setSelectedUrl(url);
@@ -240,14 +249,85 @@ export const ScrapingTool: React.FC<ScrapingToolProps> = ({ onImportProperty }) 
                         </span>
                       )}
                     </div>
+                    
                     <p className="text-sm mt-1 line-clamp-2">
                       {property.description || "Sem descrição disponível"}
                     </p>
-                    {property.image && (
-                      <div className="mt-2 text-xs text-blue-600">
-                        Imagem disponível
-                      </div>
-                    )}
+                    
+                    <div className="mt-2 flex flex-wrap gap-1">
+                      {property.activities && property.activities.length > 0 && (
+                        property.activities.map((activity, actIdx) => (
+                          <span 
+                            key={actIdx} 
+                            className="inline-block px-2 py-1 bg-nature-50 text-nature-700 rounded-full text-xs"
+                          >
+                            {activity}
+                          </span>
+                        ))
+                      )}
+                    </div>
+                    
+                    <div className="mt-2 flex items-center gap-3 text-xs text-muted-foreground">
+                      {property.image && (
+                        <TooltipProvider>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <span className="flex items-center gap-1 text-blue-600">
+                                <Info size={12} /> Imagem
+                              </span>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              <p>Imagem disponível para esta propriedade</p>
+                            </TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
+                      )}
+                      
+                      {property.contact?.phone && (
+                        <TooltipProvider>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <span className="flex items-center gap-1">
+                                <Phone size={12} /> {property.contact.phone}
+                              </span>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              <p>Telefone de contato</p>
+                            </TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
+                      )}
+                      
+                      {property.contact?.email && (
+                        <TooltipProvider>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <span className="flex items-center gap-1">
+                                <Mail size={12} /> {property.contact.email}
+                              </span>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              <p>Email de contato</p>
+                            </TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
+                      )}
+                      
+                      {property.contact?.website && (
+                        <TooltipProvider>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <span className="flex items-center gap-1">
+                                <ExternalLink size={12} /> Site
+                              </span>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              <p>Website disponível</p>
+                            </TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
+                      )}
+                    </div>
                   </div>
                 </div>
               ))}

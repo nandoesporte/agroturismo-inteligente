@@ -44,7 +44,8 @@ export class FirecrawlService {
         ? data.properties.map((property: ExtractedProperty) => ({
             ...property,
             activities: property.activities || [],
-            contact: property.contact || { phone: '', email: '', website: '' }
+            contact: property.contact || { phone: '', email: '', website: '' },
+            price: property.price ? formatPrice(property.price) : ''
           }))
         : [];
         
@@ -62,4 +63,23 @@ export class FirecrawlService {
       };
     }
   }
+  
+  static formatPrice(priceStr: string): string {
+    return formatPrice(priceStr);
+  }
+}
+
+function formatPrice(priceStr: string): string {
+  if (!priceStr) return '';
+  
+  const numberMatch = priceStr.match(/[\d.,]+/);
+  if (!numberMatch) return priceStr;
+  
+  const cleanNumber = numberMatch[0].replace(/[^\d.,]/g, '');
+  
+  const hasCurrency = /[R$€£¥]/.test(priceStr);
+  
+  if (hasCurrency) return priceStr;
+  
+  return `R$ ${cleanNumber}`;
 }
