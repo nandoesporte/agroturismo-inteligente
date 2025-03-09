@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
-import { MessageSquare, X } from 'lucide-react';
+import { MessageSquare, X, Smile } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import Chatbot from './Chatbot';
 
@@ -44,23 +44,26 @@ const ChatbotButton = () => {
           "fixed z-40 flex items-center justify-center rounded-full shadow-lg trans",
           isOpen ? "bg-foreground text-background" : "bg-nature-600 text-white hover:bg-nature-700",
           isMobile 
-            ? "bottom-4 right-4 w-12 h-12"
-            : "bottom-6 right-6 w-14 h-14"
+            ? "bottom-4 right-4 w-14 h-14"
+            : "bottom-6 right-6 w-16 h-16"
         )}
         aria-label={isOpen ? "Fechar chat" : "Abrir chat"}
       >
         {isOpen ? (
           <X className={isMobile ? "h-5 w-5" : "h-6 w-6"} />
         ) : (
-          <MessageSquare className={isMobile ? "h-5 w-5" : "h-6 w-6"} />
+          <div className="flex flex-col items-center justify-center">
+            <Smile className={isMobile ? "h-6 w-6" : "h-7 w-7"} />
+            <span className="text-xs mt-0.5">AgroGuia</span>
+          </div>
         )}
       </button>
 
       {/* Chatbot panel */}
       <div 
         className={cn(
-          "fixed z-40 rounded-xl shadow-lg bg-white trans overflow-hidden",
-          "border border-border",
+          "fixed z-40 rounded-xl shadow-xl bg-white dark:bg-gray-900 trans overflow-hidden",
+          "border border-nature-200 dark:border-nature-800",
           isOpen ? "opacity-100 scale-100" : "opacity-0 scale-95 pointer-events-none",
           isAnimating && "transition-all duration-300",
           isMobile
