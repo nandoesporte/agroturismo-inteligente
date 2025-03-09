@@ -1,3 +1,4 @@
+
 import { supabase } from '@/lib/supabase';
 
 export type ExtractedProperty = {
@@ -26,7 +27,8 @@ export class FirecrawlService {
       console.log('Making scrape request to Zyte Edge Function');
       
       const { data, error } = await supabase.functions.invoke('firecrawl', {
-        body: { url }
+        body: { url },
+        timeout: 20000 // 20 seconds timeout
       });
 
       if (error) {
@@ -45,7 +47,7 @@ export class FirecrawlService {
             ...property,
             activities: property.activities || [],
             contact: property.contact || { phone: '', email: '', website: '' },
-            price: property.price ? formatPrice(property.price) : ''
+            price: property.price ? this.formatPrice(property.price) : ''
           }))
         : [];
         

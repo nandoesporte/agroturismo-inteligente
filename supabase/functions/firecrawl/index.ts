@@ -27,7 +27,7 @@ serve(async (req) => {
   }
 
   try {
-    // Use the Zyte API key instead of Firecrawl
+    // Use the Zyte API key
     const ZYTE_API_KEY = Deno.env.get("ZYTE_API_KEY");
     
     if (!ZYTE_API_KEY) {
@@ -48,99 +48,127 @@ serve(async (req) => {
 
     console.log(`Scraping data from URL: ${url}`);
 
-    // Zyte API endpoint
-    const zyteUrl = "https://extraction.zyte.com/v1/extract";
-    console.log(`Making request to Zyte API endpoint: ${zyteUrl}`);
+    // Primary and fallback endpoints
+    const endpoints = [
+      "https://extraction.zyte.com/v1/extract",
+      "https://api.zyte.com/v1/extract", 
+      "https://api.zyte.com/v2/extract"
+    ];
     
-    // Prepare the request for Zyte API with improved selectors
-    const zytePayload = {
-      url: url,
-      extractFrom: {
-        propertyListings: {
-          // Enhanced selectors for property listings
-          selector: [
-            "div.property-card",
-            "div.listing-item",
-            "article.property", 
-            ".property-listing", 
-            ".destination-item", 
-            ".product-card", 
-            ".tour-item", 
-            ".accommodation-item", 
-            ".card", 
-            ".item", 
-            ".product",
-            // Tourism-specific selectors
-            ".experience-card",
-            ".tour-card",
-            ".farm-experience",
-            ".rural-lodging",
-            ".agritourism-item"
-          ]
-        }
-      },
-      extract: {
-        name: {
-          selector: ["h1", "h2", "h3", "h4", ".title", ".name", ".heading", ".product-title"],
-          type: "text"
-        },
-        description: {
-          selector: ["p", ".description", ".excerpt", ".summary", ".text", ".info", ".details", ".content"],
-          type: "text"
-        },
-        location: {
-          selector: [".location", ".address", ".place", ".region", ".city", ".area", "[itemprop='address']"],
-          type: "text"
-        },
-        price: {
-          selector: [".price", ".cost", ".value", ".rate", ".amount", "[itemprop='price']"],
-          type: "text"
-        },
-        image: {
-          selector: ["img", ".image", ".photo", ".picture", "[itemprop='image']"],
-          type: "attribute",
-          attribute: "src"
-        },
-        activities: {
-          selector: [".activities", ".features", ".amenities", ".tags", ".category", ".attractions"],
-          type: "list"
-        },
-        contactPhone: {
-          selector: [".phone", "[href^='tel:']", ".telephone", ".contact", "[itemprop='telephone']"],
-          type: "text"
-        },
-        contactEmail: {
-          selector: [".email", "[href^='mailto:']", "[itemprop='email']"],
-          type: "text"
-        },
-        contactWebsite: {
-          selector: ["a.website", "a.site", ".external-link", "a[href^='http']", "[itemprop='url']"],
-          type: "attribute",
-          attribute: "href"
-        }
-      }
-    };
+    let zyteData = null;
+    let usedEndpoint = "";
+    let errorMessages = [];
     
-    // Make the request to Zyte API
-    const zyteResponse = await fetch(zyteUrl, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "Authorization": `Basic ${btoa(ZYTE_API_KEY + ":")}`
-      },
-      body: JSON.stringify(zytePayload)
-    });
+    // Try each endpoint until one works
+    for (const endpoint of endpoints) {
+      try {
+        console.log(`Attempting to connect to Zyte API endpoint: ${endpoint}`);
+        
+        // Prepare the request for Zyte API with improved selectors
+        const zytePayload = {
+          url: url,
+          extractFrom: {
+            propertyListings: {
+              selector: [
+                "div.property-card",
+                "div.listing-item",
+                "article.property", 
+                ".property-listing", 
+                ".destination-item", 
+                ".product-card", 
+                ".tour-item", 
+                ".accommodation-item", 
+                ".card", 
+                ".item", 
+                ".product",
+                ".experience-card",
+                ".tour-card",
+                ".farm-experience",
+                ".rural-lodging",
+                ".agritourism-item"
+              ]
+            }
+          },
+          extract: {
+            name: {
+              selector: ["h1", "h2", "h3", "h4", ".title", ".name", ".heading", ".product-title"],
+              type: "text"
+            },
+            description: {
+              selector: ["p", ".description", ".excerpt", ".summary", ".text", ".info", ".details", ".content"],
+              type: "text"
+            },
+            location: {
+              selector: [".location", ".address", ".place", ".region", ".city", ".area", "[itemprop='address']"],
+              type: "text"
+            },
+            price: {
+              selector: [".price", ".cost", ".value", ".rate", ".amount", "[itemprop='price']"],
+              type: "text"
+            },
+            image: {
+              selector: ["img", ".image", ".photo", ".picture", "[itemprop='image']"],
+              type: "attribute",
+              attribute: "src"
+            },
+            activities: {
+              selector: [".activities", ".features", ".amenities", ".tags", ".category", ".attractions"],
+              type: "list"
+            },
+            contactPhone: {
+              selector: [".phone", "[href^='tel:']", ".telephone", ".contact", "[itemprop='telephone']"],
+              type: "text"
+            },
+            contactEmail: {
+              selector: [".email", "[href^='mailto:']", "[itemprop='email']"],
+              type: "text"
+            },
+            contactWebsite: {
+              selector: ["a.website", "a.site", ".external-link", "a[href^='http']", "[itemprop='url']"],
+              type: "attribute",
+              attribute: "href"
+            }
+          }
+        };
+        
+        // Make the request to Zyte API with increased timeout
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 15000); // 15 second timeout
+        
+        const zyteResponse = await fetch(endpoint, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": `Basic ${btoa(ZYTE_API_KEY + ":")}`
+          },
+          body: JSON.stringify(zytePayload),
+          signal: controller.signal
+        });
+        
+        clearTimeout(timeoutId);
 
-    if (!zyteResponse.ok) {
-      const errorText = await zyteResponse.text();
-      console.error("Zyte API error:", errorText);
-      console.error("Status code:", zyteResponse.status);
-      
-      throw new Error(`Zyte API error: ${errorText}`);
+        if (!zyteResponse.ok) {
+          const errorText = await zyteResponse.text();
+          throw new Error(`Zyte API error (${zyteResponse.status}): ${errorText}`);
+        }
+
+        zyteData = await zyteResponse.json();
+        usedEndpoint = endpoint;
+        console.log(`Successfully connected to endpoint: ${endpoint}`);
+        break; // Exit the loop if successful
+      } catch (error) {
+        console.error(`Error with endpoint ${endpoint}:`, error.message);
+        errorMessages.push(`${endpoint}: ${error.message}`);
+        
+        // Continue to the next endpoint
+      }
+    }
+    
+    if (!zyteData) {
+      throw new Error(`Failed to connect to any Zyte API endpoint. Errors: ${errorMessages.join('; ')}`);
     }
 
-    const zyteData = await zyteResponse.json();
-    console.log("Received response from Zyte API");
+    console.log(`Received response from Zyte API using endpoint: ${usedEndpoint}`);
     
     // Process and clean the extracted data
     const extractedProperties = processZyteResponse(zyteData);
@@ -151,7 +179,7 @@ serve(async (req) => {
         success: true, 
         properties: extractedProperties,
         rawData: zyteData,
-        endpoint: "zyte"
+        endpoint: usedEndpoint
       }),
       { 
         headers: { ...corsHeaders, "Content-Type": "application/json" } 
@@ -179,16 +207,16 @@ function processZyteResponse(data: any): ExtractedProperty[] {
     
     data.propertyListings.forEach((item: any) => {
       const property: ExtractedProperty = {
-        name: item.name || '',
-        description: item.description || '',
-        location: item.location || '',
-        price: item.price || '',
-        activities: Array.isArray(item.activities) ? item.activities : [],
-        image: item.image || '',
+        name: normalizeText(item.name),
+        description: normalizeText(item.description),
+        location: normalizeText(item.location),
+        price: normalizeText(item.price),
+        activities: normalizeArray(item.activities),
+        image: normalizeUrl(item.image),
         contact: {
-          phone: item.contactPhone || '',
-          email: item.contactEmail || '',
-          website: item.contactWebsite || ''
+          phone: normalizeText(item.contactPhone),
+          email: normalizeText(item.contactEmail),
+          website: normalizeUrl(item.contactWebsite)
         }
       };
       
@@ -203,16 +231,16 @@ function processZyteResponse(data: any): ExtractedProperty[] {
     // Check if we have info directly at the root level
     if (data && (data.name || data.description || data.price)) {
       const property: ExtractedProperty = {
-        name: data.name || 'Extracted Property',
-        description: data.description || '',
-        location: data.location || '',
-        price: data.price || '',
-        activities: Array.isArray(data.activities) ? data.activities : [],
-        image: data.image || '',
+        name: normalizeText(data.name) || 'Extracted Property',
+        description: normalizeText(data.description),
+        location: normalizeText(data.location),
+        price: normalizeText(data.price),
+        activities: normalizeArray(data.activities),
+        image: normalizeUrl(data.image),
         contact: {
-          phone: data.contactPhone || '',
-          email: data.contactEmail || '',
-          website: data.contactWebsite || ''
+          phone: normalizeText(data.contactPhone),
+          email: normalizeText(data.contactEmail),
+          website: normalizeUrl(data.contactWebsite)
         }
       };
       
@@ -227,14 +255,14 @@ function processZyteResponse(data: any): ExtractedProperty[] {
     // Create at least one generic property with whatever data we have
     const property: ExtractedProperty = {
       name: findValueInObject(data, ['name', 'title', 'heading']) || 'Extracted Property',
-      description: findValueInObject(data, ['description', 'content', 'text', 'summary']) || '',
-      location: findValueInObject(data, ['location', 'address', 'place']) || '',
-      price: findValueInObject(data, ['price', 'cost', 'value']) || '',
-      image: findValueInObject(data, ['image', 'img', 'photo', 'picture']) || '',
+      description: findValueInObject(data, ['description', 'content', 'text', 'summary']),
+      location: findValueInObject(data, ['location', 'address', 'place']),
+      price: findValueInObject(data, ['price', 'cost', 'value']),
+      image: findValueInObject(data, ['image', 'img', 'photo', 'picture']),
       contact: {
-        phone: findValueInObject(data, ['contactPhone', 'phone', 'telephone']) || '',
-        email: findValueInObject(data, ['contactEmail', 'email']) || '',
-        website: findValueInObject(data, ['contactWebsite', 'website', 'url']) || ''
+        phone: findValueInObject(data, ['contactPhone', 'phone', 'telephone']),
+        email: findValueInObject(data, ['contactEmail', 'email']),
+        website: findValueInObject(data, ['contactWebsite', 'website', 'url'])
       }
     };
     
@@ -250,7 +278,7 @@ function findValueInObject(obj: any, possibleKeys: string[]): string | null {
   
   for (const key of possibleKeys) {
     if (obj[key] && typeof obj[key] === 'string' && obj[key].trim() !== '') {
-      return obj[key];
+      return normalizeText(obj[key]);
     }
   }
   
@@ -259,11 +287,39 @@ function findValueInObject(obj: any, possibleKeys: string[]): string | null {
     if (obj[prop] && typeof obj[prop] === 'object') {
       for (const key of possibleKeys) {
         if (obj[prop][key] && typeof obj[prop][key] === 'string' && obj[prop][key].trim() !== '') {
-          return obj[prop][key];
+          return normalizeText(obj[prop][key]);
         }
       }
     }
   }
   
   return null;
+}
+
+// Helper functions to normalize data
+function normalizeText(text: any): string {
+  if (!text) return '';
+  if (typeof text === 'string') return text.trim();
+  if (typeof text === 'number') return text.toString();
+  return '';
+}
+
+function normalizeUrl(url: any): string {
+  if (!url) return '';
+  if (typeof url === 'string') {
+    const trimmedUrl = url.trim();
+    // Add http:// if the URL doesn't have a protocol
+    if (trimmedUrl && !trimmedUrl.startsWith('http://') && !trimmedUrl.startsWith('https://')) {
+      return 'https://' + trimmedUrl;
+    }
+    return trimmedUrl;
+  }
+  return '';
+}
+
+function normalizeArray(arr: any): string[] {
+  if (!arr) return [];
+  if (typeof arr === 'string') return [arr.trim()];
+  if (Array.isArray(arr)) return arr.map(item => normalizeText(item)).filter(item => item !== '');
+  return [];
 }
