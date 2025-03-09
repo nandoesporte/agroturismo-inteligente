@@ -78,7 +78,7 @@ serve(async (req) => {
       const prompt = `
         Você é um especialista em extração de dados especializado em propriedades de hospedagem e turismo. Sua tarefa é extrair informações de propriedades a partir do conteúdo HTML fornecido.
         
-        Extraia TODAS as propriedades/hospedagens que você encontrar, sem limitação de quantidade (extraia no mínimo 10 propriedades se existirem). Para cada uma, forneça APENAS os seguintes campos:
+        Extraia TODAS as propriedades/hospedagens que você encontrar, sem limitação de quantidade (extraia no mínimo 15 propriedades se existirem). Para cada uma, forneça APENAS os seguintes campos:
         1. Nome (string): Nome da propriedade/pousada/hotel
         2. Localização (string): Localização da propriedade
         3. Preço (string): Informação de preço exatamente como aparece (com símbolo de moeda)
@@ -135,7 +135,7 @@ serve(async (req) => {
             { role: "user", content: prompt + "\n\nHere is the content to extract from:\n\n" + truncatedContent }
           ],
           temperature: 0.2, // Lower temperature for more consistent structured output
-          max_tokens: 6000  // Aumentado para permitir mais propriedades na resposta
+          max_tokens: 8000  // Aumentado para permitir mais propriedades na resposta
         })
       });
 

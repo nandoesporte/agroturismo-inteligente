@@ -1,5 +1,4 @@
-
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -9,7 +8,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
-import { Plus, Undo2, Check, X, ExternalLink, Phone, Mail, Info, Sparkles, Clock, Home, Tag } from 'lucide-react';
+import { Plus, Undo2, Check, X, ExternalLink, Phone, Mail, Info, Sparkles, Clock, Home, Tag, AlertTriangle, FileCheck } from 'lucide-react';
 import {
   Tooltip,
   TooltipContent,
@@ -23,8 +22,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { supabase } from '@/lib/supabase';
 
-// Predefined URLs focused on Paraná rural tourism
 const predefinedUrls = [
   { name: "Trivago Agroturismo Paraná", url: "https://www.trivago.com.br/pt-BR/srl/hotels-paraná-brasil/agriturismo-pousada-rural?search=paraná%20agroturismo" },
   { name: "Trivago Pousadas Rurais Paraná", url: "https://www.trivago.com.br/pt-BR/srl/hotels-paraná-brasil/pousada-rural?search=paraná%20pousada%20rural" },
@@ -35,7 +34,6 @@ const predefinedUrls = [
   { name: "Cafés Coloniais Paraná", url: "https://www.google.com/search?q=cafés+coloniais+paraná" }
 ];
 
-// Property categories for filtering
 const propertyCategories = [
   "Todos",
   "Agroturismo",
@@ -64,6 +62,39 @@ export const ScrapingTool: React.FC<ScrapingToolProps> = ({ onImportProperty }) 
   const [bulkImportInProgress, setBulkImportInProgress] = useState(false);
   const [urlsToScrape, setUrlsToScrape] = useState<string[]>([]);
   const [currentUrlIndex, setCurrentUrlIndex] = useState(0);
+  const [existingProperties, setExistingProperties] = useState<string[]>([]);
+  const [importingSelectedInProgress, setImportingSelectedInProgress] = useState(false);
+  const [currentImportIndex, setCurrentImportIndex] = useState(0);
+  const [totalToImport, setTotalToImport] = useState(0);
+
+  useEffect(() => {
+    fetchExistingProperties();
+  }, []);
+
+  const fetchExistingProperties = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('properties')
+        .select('name, location');
+      
+      if (error) throw error;
+      
+      const existingIdentifiers = data?.map(p => 
+        `${p.name.toLowerCase().trim()}|${p.location.toLowerCase().trim()}`
+      ) || [];
+      
+      setExistingProperties(existingIdentifiers);
+    } catch (error) {
+      console.error('Error fetching existing properties:', error);
+    }
+  };
+
+  const propertyExists = (property: ExtractedProperty): boolean => {
+    if (!property.name || !property.location) return false;
+    
+    const identifier = `${property.name.toLowerCase().trim()}|${property.location.toLowerCase().trim()}`;
+    return existingProperties.includes(identifier);
+  };
 
   const handleUrlSelect = (url: string) => {
     setSelectedUrl(url);
@@ -125,7 +156,6 @@ export const ScrapingTool: React.FC<ScrapingToolProps> = ({ onImportProperty }) 
       [index]: !prev[index]
     }));
 
-    // Update selectAll state if all properties are selected or not
     const updatedSelections = { ...selectedProperties, [index]: !selectedProperties[index] };
     const allSelected = filteredProperties.every((_, i) => {
       const originalIndex = scrapedProperties.findIndex(p => p === filteredProperties[i]);
@@ -148,7 +178,7 @@ export const ScrapingTool: React.FC<ScrapingToolProps> = ({ onImportProperty }) 
     setSelectedProperties(newSelectedProperties);
   };
 
-  const handleImportSelected = () => {
+  const handleImportSelected = async () => {
     const selectedItems = Object.entries(selectedProperties)
       .filter(([_, isSelected]) => isSelected)
       .map(([index]) => scrapedProperties[parseInt(index)]);
@@ -162,8 +192,14 @@ export const ScrapingTool: React.FC<ScrapingToolProps> = ({ onImportProperty }) 
       return;
     }
     
-    selectedItems.forEach(property => {
-      // Convert the property to the format expected by the form
+    setImportingSelectedInProgress(true);
+    setTotalToImport(selectedItems.length);
+    setCurrentImportIndex(0);
+    
+    for (let i = 0; i < selectedItems.length; i++) {
+      setCurrentImportIndex(i + 1);
+      const property = selectedItems[i];
+      
       const formattedProperty = {
         name: property.name || '',
         location: property.location || '',
@@ -183,20 +219,25 @@ export const ScrapingTool: React.FC<ScrapingToolProps> = ({ onImportProperty }) 
       };
       
       onImportProperty(formattedProperty);
-    });
+      
+      if (i < selectedItems.length - 1) {
+        await new Promise(resolve => setTimeout(resolve, 300));
+      }
+    }
+    
+    await fetchExistingProperties();
     
     toast({
       title: "Propriedades importadas",
-      description: `${selectedItems.length} propriedades foram importadas para o formulário`,
+      description: `${selectedItems.length} propriedades foram importadas para o sistema`,
     });
     
-    // Reset selections
     setSelectedProperties({});
     setSelectAll(false);
+    setImportingSelectedInProgress(false);
   };
 
   const handleBulkScrape = async () => {
-    // Extract URLs from all predefined URLs
     const urls = predefinedUrls.map(item => item.url);
     setUrlsToScrape(urls);
     setCurrentUrlIndex(0);
@@ -204,13 +245,11 @@ export const ScrapingTool: React.FC<ScrapingToolProps> = ({ onImportProperty }) 
     setScrapedProperties([]);
     setSelectedProperties({});
     
-    // Start with the first URL
     await processBulkScrape(urls, 0);
   };
 
   const processBulkScrape = async (urls: string[], index: number) => {
     if (index >= urls.length) {
-      // All URLs processed
       setBulkImportInProgress(false);
       toast({
         title: "Processo em lote concluído",
@@ -234,7 +273,6 @@ export const ScrapingTool: React.FC<ScrapingToolProps> = ({ onImportProperty }) 
       const result = await FirecrawlService.scrapeWebsite(urlToScrape);
       
       if (result.success && result.properties && result.properties.length > 0) {
-        // Append new properties to existing ones
         setScrapedProperties(prev => [...prev, ...result.properties]);
         
         toast({
@@ -253,14 +291,12 @@ export const ScrapingTool: React.FC<ScrapingToolProps> = ({ onImportProperty }) 
       setIsLoading(false);
       setProgress(100);
       
-      // Process next URL after a short delay
       setTimeout(() => {
         processBulkScrape(urls, index + 1);
       }, 1000);
     }
   };
 
-  // Filter properties by selected category
   const filteredProperties = selectedCategory === "Todos"
     ? scrapedProperties
     : scrapedProperties.filter(property => property.type === selectedCategory);
@@ -364,6 +400,16 @@ export const ScrapingTool: React.FC<ScrapingToolProps> = ({ onImportProperty }) 
           <Progress value={progress} className="w-full mt-4" />
         )}
 
+        {importingSelectedInProgress && (
+          <div className="mt-4 space-y-2">
+            <div className="flex items-center justify-between mb-1">
+              <span className="text-sm font-medium">Importando propriedades ({currentImportIndex}/{totalToImport})</span>
+              <span className="text-sm">{Math.round((currentImportIndex / totalToImport) * 100)}%</span>
+            </div>
+            <Progress value={(currentImportIndex / totalToImport) * 100} className="w-full" />
+          </div>
+        )}
+
         {scrapedProperties.length > 0 && (
           <div className="mt-6 space-y-4">
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
@@ -386,18 +432,28 @@ export const ScrapingTool: React.FC<ScrapingToolProps> = ({ onImportProperty }) 
                 </Select>
                 
                 <Button
-                  variant="outline"
+                  variant="default"
                   size="sm"
                   onClick={handleImportSelected}
-                  className="text-sm"
+                  className="text-sm bg-nature-600 hover:bg-nature-700"
+                  disabled={importingSelectedInProgress}
                 >
-                  <Plus className="h-4 w-4 mr-1" /> Importar Selecionadas
+                  {importingSelectedInProgress ? (
+                    <>
+                      <FileCheck className="h-4 w-4 mr-1 animate-pulse" /> 
+                      Importando {currentImportIndex}/{totalToImport}
+                    </>
+                  ) : (
+                    <>
+                      <Plus className="h-4 w-4 mr-1" /> 
+                      Importar Todas Selecionadas
+                    </>
+                  )}
                 </Button>
               </div>
             </div>
             
             <div className="border rounded-md">
-              {/* Select all header */}
               <div className="p-3 bg-muted/20 border-b flex items-center">
                 <Checkbox
                   id="select-all"
@@ -413,8 +469,13 @@ export const ScrapingTool: React.FC<ScrapingToolProps> = ({ onImportProperty }) 
               <div className="divide-y">
                 {filteredProperties.map((property, index) => {
                   const originalIndex = scrapedProperties.findIndex(p => p === property);
+                  const isExisting = propertyExists(property);
+                  
                   return (
-                    <div key={originalIndex} className="p-3 flex items-start space-x-3">
+                    <div 
+                      key={originalIndex} 
+                      className={`p-3 flex items-start space-x-3 ${isExisting ? 'bg-amber-50' : ''}`}
+                    >
                       <Checkbox
                         id={`property-${originalIndex}`}
                         checked={selectedProperties[originalIndex] || false}
@@ -424,7 +485,24 @@ export const ScrapingTool: React.FC<ScrapingToolProps> = ({ onImportProperty }) 
                       <div className="flex-1 min-w-0">
                         <div className="flex items-start justify-between">
                           <div>
-                            <p className="font-medium truncate">{property.name || "Propriedade sem nome"}</p>
+                            <div className="flex items-center gap-2">
+                              <p className="font-medium truncate">{property.name || "Propriedade sem nome"}</p>
+                              {isExisting && (
+                                <TooltipProvider>
+                                  <Tooltip>
+                                    <TooltipTrigger asChild>
+                                      <div className="inline-flex items-center px-2 py-0.5 bg-amber-100 text-amber-800 rounded-full text-xs">
+                                        <AlertTriangle className="h-3 w-3 mr-1" />
+                                        Duplicada
+                                      </div>
+                                    </TooltipTrigger>
+                                    <TooltipContent>
+                                      <p>Esta propriedade já existe no sistema</p>
+                                    </TooltipContent>
+                                  </Tooltip>
+                                </TooltipProvider>
+                              )}
+                            </div>
                             <div className="flex items-center gap-2">
                               <p className="text-sm text-muted-foreground truncate">
                                 {property.location || "Localização não especificada"}
@@ -443,7 +521,6 @@ export const ScrapingTool: React.FC<ScrapingToolProps> = ({ onImportProperty }) 
                           )}
                         </div>
                         
-                        {/* Activities */}
                         {property.activities && property.activities.length > 0 && (
                           <div className="mt-2">
                             <p className="text-xs font-medium text-muted-foreground mb-1">Atividades:</p>
@@ -460,7 +537,6 @@ export const ScrapingTool: React.FC<ScrapingToolProps> = ({ onImportProperty }) 
                           </div>
                         )}
                         
-                        {/* Amenities */}
                         {property.amenities && property.amenities.length > 0 && (
                           <div className="mt-2">
                             <p className="text-xs font-medium text-muted-foreground mb-1">Comodidades:</p>
@@ -477,7 +553,6 @@ export const ScrapingTool: React.FC<ScrapingToolProps> = ({ onImportProperty }) 
                           </div>
                         )}
                         
-                        {/* Hours */}
                         {property.hours && (
                           <div className="mt-2 flex items-center gap-1 text-xs">
                             <Clock size={12} className="text-muted-foreground" />
@@ -485,7 +560,6 @@ export const ScrapingTool: React.FC<ScrapingToolProps> = ({ onImportProperty }) 
                           </div>
                         )}
                         
-                        {/* Contact Information */}
                         <div className="mt-2 flex items-center flex-wrap gap-3 text-xs text-muted-foreground">
                           {property.image && (
                             <TooltipProvider>
