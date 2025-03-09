@@ -87,6 +87,39 @@ serve(async (req) => {
          - Fazenda Roseira (Castro): Produção leiteira e histórica da colonização holandesa
          - Recanto Sete Quedas (Prudentópolis): Ecoturismo com cachoeiras e trilhas
 
+      Experiências populares:
+         - Dia na Fazenda: Experiência de um dia completo com atividades rurais como ordenha, preparo de alimentos e passeios de trator.
+         - Turismo de Aventura Rural: Trilhas, rapel em cachoeiras, cavalgadas e tirolesa em ambientes naturais.
+         - Rota do Vinho: Visita a diversas vinícolas do Paraná com degustação de vinhos e produtos locais.
+         - Imersão Cultural: Vivência com comunidades tradicionais, aprendendo sobre costumes e tradições.
+         - Gastronomia Rural: Aulas de culinária típica, degustação de produtos e visita a produtores locais.
+         - Hospedagem Rural: Pernoite em fazendas históricas ou pousadas rurais com experiências autênticas.
+
+      Propriedades com dados específicos:
+         - Fazenda Santa Clara (Guarapuava):
+           * Preço: R$ 120 por pessoa/dia
+           * Horários: Aberta de quarta a domingo, das 9h às 17h
+           * Atividades: Passeios a cavalo, produção de queijos, café colonial, trilhas
+           * Contato: (42) 3624-8877, fazenda@santaclara.com.br
+           
+         - Recanto das Araucárias (Prudentópolis):
+           * Preço: Hospedagem a partir de R$ 280 (casal)
+           * Horários: Check-in às 14h, check-out às 12h
+           * Atividades: Cachoeiras, observação de pássaros, banhos de rio
+           * Contato: (42) 3446-5599, reservas@recantoaraucarias.com.br
+           
+         - Vinícola Don Giovanni (Colombo):
+           * Preço: Tour com degustação - R$ 85 por pessoa
+           * Horários: Visitas agendadas às 10h, 14h e 16h
+           * Atividades: Tour guiado, degustação de vinhos, loja de produtos
+           * Contato: (41) 3666-2243, contato@dongiovanni.com.br
+           
+         - Sítio Alegria (Campo Magro):
+           * Preço: Entrada R$ 45 (crianças até 5 anos não pagam)
+           * Horários: Sábados e domingos, das 9h às 17h
+           * Atividades: Colheita de morangos, alimentação de animais, playground rural
+           * Contato: (41) 99888-7777, visitas@sitioalegria.com.br
+
       DIRETRIZES:
       
       1. Seja sempre amigável, prestativo e personalize seu atendimento.
