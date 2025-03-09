@@ -21,47 +21,52 @@ serve(async (req) => {
 
     console.log("Request received for species recognition");
     
-    // Get the request content type
-    const contentType = req.headers.get("content-type") || "";
+    // Logging request headers to debug content type issues
+    console.log("Request headers:", Object.fromEntries(req.headers.entries()));
+    
     let imageBase64 = "";
+    const contentType = req.headers.get("content-type") || "";
+    console.log("Content type:", contentType);
     
     if (contentType.includes("application/json")) {
       try {
-        // Handle JSON payload
-        const requestText = await req.text();
-        console.log("Received JSON request body length:", requestText.length);
+        // Clone the request to read it multiple times if needed
+        const clonedReq = req.clone();
+        const requestText = await clonedReq.text();
+        console.log("Request body length:", requestText.length);
         
         if (!requestText || requestText.trim() === '') {
+          console.error("Empty request body received");
           throw new Error("Empty request body");
         }
         
-        let body;
         try {
-          body = JSON.parse(requestText);
+          const body = JSON.parse(requestText);
+          console.log("Parsed JSON successfully");
+          
+          if (!body.image) {
+            console.error("Missing image field in request");
+            throw new Error("No image data provided in the JSON payload");
+          }
+          
+          console.log("Image data received, length:", body.image.length);
+          imageBase64 = body.image.replace(/^data:image\/[a-z]+;base64,/, "");
+          console.log("Base64 image extracted, length:", imageBase64.length);
         } catch (parseError) {
-          console.error("JSON parse error:", parseError.message);
+          console.error("JSON parsing error:", parseError.message);
           throw new Error("Invalid JSON format: " + parseError.message);
         }
-        
-        if (!body || !body.image) {
-          throw new Error("No image data provided in the JSON payload");
-        }
-        
-        console.log("Image data received, length:", body.image.length);
-        imageBase64 = body.image.replace(/^data:image\/[a-z]+;base64,/, "");
-        console.log("Base64 image extracted, length:", imageBase64.length);
       } catch (jsonError) {
         console.error("JSON processing error:", jsonError);
-        throw new Error("Invalid JSON format: " + jsonError.message);
+        throw new Error("Failed to process JSON data: " + jsonError.message);
       }
-    } else {
-      // Attempt to parse FormData
+    } else if (contentType.includes("multipart/form-data")) {
       try {
         const formData = await req.formData();
         const imageFile = formData.get('image');
         
         if (!imageFile || !(imageFile instanceof File)) {
-          throw new Error("No valid image file provided");
+          throw new Error("No valid image file provided in form data");
         }
 
         // Convert image to base64
@@ -69,13 +74,17 @@ serve(async (req) => {
         imageBase64 = btoa(String.fromCharCode(...new Uint8Array(imageBytes)));
         console.log("FormData image processed, base64 length:", imageBase64.length);
       } catch (formError) {
-        console.error("Form data parsing error:", formError.message);
-        throw new Error("Could not process the image data. Please try a different format or image.");
+        console.error("Form data processing error:", formError);
+        throw new Error("Failed to process form data: " + formError.message);
       }
+    } else {
+      console.error("Unsupported content type:", contentType);
+      throw new Error(`Unsupported content type: ${contentType}. Please use application/json or multipart/form-data.`);
     }
 
-    if (!imageBase64) {
-      throw new Error("No image data was provided");
+    if (!imageBase64 || imageBase64.length < 100) {
+      console.error("Invalid or missing image data, length:", imageBase64 ? imageBase64.length : 0);
+      throw new Error("Missing or invalid image data");
     }
     
     console.log("Processing image with vision model");
