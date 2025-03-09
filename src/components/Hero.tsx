@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { ArrowRight, ArrowDown, ChevronDown, Leaf } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -10,6 +9,7 @@ const Hero = () => {
   const [currentSlide, setCurrentSlide] = useState(0);
   const [isLoaded, setIsLoaded] = useState(false);
   const [showScrollHint, setShowScrollHint] = useState(true);
+  const [showSlideIndicators, setShowSlideIndicators] = useState(false);
 
   const slides = [
     {
@@ -201,22 +201,23 @@ const Hero = () => {
           </motion.div>
         </motion.div>
 
-        {/* Repositioned slide indicators - moved up above the buttons */}
-        <div className="absolute bottom-32 sm:bottom-28 left-0 right-0 flex justify-center space-x-1.5">
-          {slides.map((_, index) => (
-            <button
-              key={index}
-              onClick={() => setCurrentSlide(index)}
-              className={`h-1.5 rounded-full transition-all ${
-                currentSlide === index 
-                  ? 'w-6 sm:w-8 bg-white' 
-                  : 'w-3 sm:w-4 bg-white/50 hover:bg-white/75'
-              }`}
-              aria-label={`Go to slide ${index + 1}`}
-              aria-current={currentSlide === index}
-            />
-          ))}
-        </div>
+        {showSlideIndicators && (
+          <div className="absolute bottom-32 sm:bottom-28 left-0 right-0 flex justify-center space-x-1.5">
+            {slides.map((_, index) => (
+              <button
+                key={index}
+                onClick={() => setCurrentSlide(index)}
+                className={`h-1.5 rounded-full transition-all ${
+                  currentSlide === index 
+                    ? 'w-6 sm:w-8 bg-white' 
+                    : 'w-3 sm:w-4 bg-white/50 hover:bg-white/75'
+                }`}
+                aria-label={`Go to slide ${index + 1}`}
+                aria-current={currentSlide === index}
+              />
+            ))}
+          </div>
+        )}
         
         {showScrollHint && (
           <motion.div 
