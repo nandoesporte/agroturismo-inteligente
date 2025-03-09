@@ -13,6 +13,7 @@ import { cn } from '@/lib/utils';
 import ChatbotButton from '@/components/ChatbotButton';
 import { supabase } from '@/lib/supabase';
 import { Loader2 } from 'lucide-react';
+import { useToast } from '@/hooks/use-toast';
 
 // Categorias de filtro
 const categories = [
@@ -30,10 +31,11 @@ const Properties = () => {
   const [filteredProperties, setFilteredProperties] = useState<Property[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [showFilters, setShowFilters] = useState(false);
-  const [priceRange, setPriceRange] = useState([0, 200]);
+  const [priceRange, setPriceRange] = useState([0, 500]); // Increased max price range
   const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
   const [selectedActivities, setSelectedActivities] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
+  const { toast } = useToast();
   
   useEffect(() => {
     fetchProperties();
@@ -60,15 +62,21 @@ const Properties = () => {
         images: item.images || [],
         tags: item.tags || [],
         isFeatured: item.is_featured,
-        amenities: item.amenities,
+        amenities: item.amenities || [],
         hours: item.hours,
-        contact: item.contact
+        contact: item.contact || {}
       }));
       
+      console.log('Fetched properties:', transformedProperties.length);
       setProperties(transformedProperties);
       setFilteredProperties(transformedProperties);
     } catch (error: any) {
       console.error('Error fetching properties:', error);
+      toast({
+        title: "Erro ao carregar propriedades",
+        description: error.message,
+        variant: "destructive",
+      });
     } finally {
       setLoading(false);
     }
@@ -84,7 +92,9 @@ const Properties = () => {
         property => 
           property.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
           property.location.toLowerCase().includes(searchTerm.toLowerCase()) ||
-          property.tags.some(tag => tag.toLowerCase().includes(searchTerm.toLowerCase()))
+          (property.tags && property.tags.some(tag => 
+            tag && typeof tag === 'string' && tag.toLowerCase().includes(searchTerm.toLowerCase())
+          ))
       );
     }
     
@@ -95,21 +105,28 @@ const Properties = () => {
     
     // Filtrar por categorias selecionadas
     if (selectedCategories.length > 0) {
-      // Simulação - na prática, as propriedades teriam um campo de categoria
-      // Aqui estamos filtrando aleatoriamente apenas para demonstração
       results = results.filter(property => {
-        const randomMatch = Math.random() > 0.3;
-        return randomMatch;
+        // Verifica se alguma tag da propriedade corresponde a alguma categoria selecionada
+        return property.tags && property.tags.some(tag => 
+          selectedCategories.some(category => 
+            tag && typeof tag === 'string' && tag.toLowerCase().includes(category.toLowerCase())
+          )
+        );
       });
     }
     
     // Filtrar por atividades
     if (selectedActivities.length > 0) {
       results = results.filter(property => 
-        property.tags.some(tag => selectedActivities.includes(tag))
+        property.tags && property.tags.some(tag => 
+          selectedActivities.some(activity => 
+            tag && typeof tag === 'string' && tag.toLowerCase().includes(activity.toLowerCase())
+          )
+        )
       );
     }
     
+    console.log('Filtered properties:', results.length);
     setFilteredProperties(results);
   }, [searchTerm, properties, priceRange, selectedCategories, selectedActivities]);
   
@@ -134,7 +151,7 @@ const Properties = () => {
   // Limpar todos os filtros
   const clearFilters = () => {
     setSearchTerm('');
-    setPriceRange([0, 200]);
+    setPriceRange([0, 500]);
     setSelectedCategories([]);
     setSelectedActivities([]);
   };
@@ -230,8 +247,8 @@ const Properties = () => {
                     <Slider
                       value={priceRange}
                       min={0}
-                      max={200}
-                      step={5}
+                      max={500}
+                      step={10}
                       onValueChange={setPriceRange}
                       className="my-4"
                     />
@@ -246,7 +263,7 @@ const Properties = () => {
                 <div>
                   <h3 className="text-sm font-medium mb-3">Categorias</h3>
                   <div className="space-y-2">
-                    {categories.slice(0, 5).map(category => (
+                    {categories.map(category => (
                       <div key={category} className="flex items-center">
                         <Checkbox
                           id={`category-${category}`}
