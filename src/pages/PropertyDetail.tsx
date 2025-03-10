@@ -11,6 +11,8 @@ import ExperienceCard, { Experience } from '@/components/ExperienceCard';
 import ChatbotButton from '@/components/ChatbotButton';
 import { useToast } from '@/components/ui/use-toast';
 import { supabase } from '@/lib/supabase';
+import ReviewsList from '@/components/ReviewsList';
+import ReviewForm from '@/components/ReviewForm';
 
 const PropertyDetail = () => {
   const { id } = useParams();
@@ -47,6 +49,8 @@ const PropertyDetail = () => {
       avatar: "https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1288&q=80"
     }
   ]);
+  const [dbReviews, setDbReviews] = useState([]);
+  const [showAddReview, setShowAddReview] = useState(false);
 
   useEffect(() => {
     const fetchPropertyData = async () => {
@@ -118,6 +122,16 @@ const PropertyDetail = () => {
           
           setExperiences(transformedExperiences);
         }
+
+        const { data: reviewsData, error: reviewsError } = await supabase
+          .from('reviews')
+          .select('*')
+          .eq('property_id', id)
+          .order('created_at', { ascending: false });
+
+        if (!reviewsError && reviewsData) {
+          setDbReviews(reviewsData);
+        }
         
       } catch (error) {
         console.error('Error fetching property data:', error);
@@ -161,6 +175,46 @@ const PropertyDetail = () => {
         "Esta propriedade foi removida dos seus favoritos." : 
         "Esta propriedade foi adicionada aos seus favoritos.",
     });
+  };
+
+  const handleReviewSubmit = async (reviewData) => {
+    try {
+      const newReview = {
+        ...reviewData,
+        property_id: id
+      };
+      
+      const { data, error } = await supabase
+        .from('reviews')
+        .insert(newReview)
+        .select();
+        
+      if (error) throw error;
+      
+      toast({
+        title: "Avaliação enviada",
+        description: "Sua avaliação foi enviada com sucesso. Obrigado por compartilhar sua experiência!",
+      });
+      
+      const { data: updatedReviews, error: reviewsError } = await supabase
+        .from('reviews')
+        .select('*')
+        .eq('property_id', id)
+        .order('created_at', { ascending: false });
+        
+      if (!reviewsError && updatedReviews) {
+        setDbReviews(updatedReviews);
+      }
+      
+      setShowAddReview(false);
+    } catch (error) {
+      console.error('Error submitting review:', error);
+      toast({
+        title: "Erro",
+        description: "Não foi possível enviar sua avaliação. Por favor, tente novamente.",
+        variant: "destructive"
+      });
+    }
   };
 
   if (loading) {
@@ -229,6 +283,8 @@ const PropertyDetail = () => {
   };
 
   const propertyHours = formatPropertyHours();
+
+  const allReviews = [...(dbReviews || []), ...reviews];
 
   return (
     <div className="min-h-screen flex flex-col">
@@ -485,20 +541,56 @@ const PropertyDetail = () => {
                     </div>
                   </div>
                   
-                  {reviews.length > 0 ? (
+                  <div className="mb-6">
+                    {showAddReview ? (
+                      <div className="border border-border rounded-lg p-4 mb-6">
+                        <h3 className="text-lg font-medium mb-4">Adicionar Avaliação</h3>
+                        <ReviewForm onSubmit={handleReviewSubmit} context="property" />
+                        <div className="mt-4 flex justify-end">
+                          <Button 
+                            variant="outline" 
+                            onClick={() => setShowAddReview(false)}
+                            className="mr-2"
+                          >
+                            Cancelar
+                          </Button>
+                        </div>
+                      </div>
+                    ) : (
+                      <Button 
+                        onClick={() => setShowAddReview(true)}
+                        className="bg-nature-600 hover:bg-nature-700"
+                      >
+                        Avaliar esta propriedade
+                      </Button>
+                    )}
+                  </div>
+                  
+                  {allReviews.length > 0 ? (
                     <div className="space-y-6">
-                      {reviews.map(review => (
-                        <div key={review.id} className="border-b border-border pb-6">
+                      {allReviews.map((review, index) => (
+                        <div key={review.id || index} className="border-b border-border pb-6">
                           <div className="flex items-start">
                             <img 
-                              src={review.avatar} 
-                              alt={review.name}
+                              src={review.user_avatar || review.avatar || 'https://via.placeholder.com/40'} 
+                              alt={review.user_name || review.name}
                               className="w-10 h-10 rounded-full object-cover mr-4"
+                              onError={(e) => {
+                                e.currentTarget.src = 'https://via.placeholder.com/40';
+                              }}
                             />
                             <div>
                               <div className="flex items-center">
-                                <h3 className="font-medium">{review.name}</h3>
-                                <span className="text-muted-foreground text-sm ml-2">{review.date}</span>
+                                <h3 className="font-medium">{review.user_name || review.name}</h3>
+                                <span className="text-muted-foreground text-sm ml-2">
+                                  {review.created_at 
+                                    ? new Date(review.created_at).toLocaleDateString('pt-BR', { 
+                                        year: 'numeric', 
+                                        month: 'long'
+                                      }) 
+                                    : review.date
+                                  }
+                                </span>
                               </div>
                               <div className="flex mt-1 mb-3">
                                 {[...Array(5)].map((_, i) => (
@@ -525,7 +617,7 @@ const PropertyDetail = () => {
                     </p>
                   )}
                   
-                  {reviews.length > 0 && (
+                  {allReviews.length > 0 && (
                     <div className="mt-8 text-center">
                       <Button variant="outline">Ver Todas as Avaliações</Button>
                     </div>
