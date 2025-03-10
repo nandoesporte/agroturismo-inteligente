@@ -13,13 +13,15 @@ interface ReviewFormProps {
   propertyId?: string;
   onReviewSubmitted: () => void;
   onSubmit?: (reviewData: any) => Promise<void>;
+  context?: string;
 }
 
 const ReviewForm: React.FC<ReviewFormProps> = ({ 
   experienceId,
   propertyId,
   onReviewSubmitted,
-  onSubmit 
+  onSubmit,
+  context
 }) => {
   const [rating, setRating] = useState(0);
   const [comment, setComment] = useState('');
@@ -67,7 +69,8 @@ const ReviewForm: React.FC<ReviewFormProps> = ({
           rating,
           comment,
           experience_id: experienceId,
-          property_id: propertyId
+          property_id: propertyId,
+          context
         });
         
         // Reset form
