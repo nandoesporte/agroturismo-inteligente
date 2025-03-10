@@ -30,7 +30,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Edit, Plus, Trash2, Image, Clock } from 'lucide-react';
+import { Edit, Plus, Trash2, Image, Clock, Eye } from 'lucide-react';
+import { Link } from 'react-router-dom';
 
 interface Experience {
   id: string;
@@ -166,6 +167,25 @@ const AdminExperiences = () => {
     if (!confirm("Tem certeza que deseja excluir esta experiência?")) return;
     
     try {
+      // First check if there are reviews associated with this experience
+      const { data: reviewsData, error: reviewsError } = await supabase
+        .from('reviews')
+        .select('id')
+        .eq('experience_id', id);
+        
+      if (reviewsError) throw reviewsError;
+      
+      if (reviewsData && reviewsData.length > 0) {
+        // Delete all reviews first
+        const { error: deleteReviewsError } = await supabase
+          .from('reviews')
+          .delete()
+          .eq('experience_id', id);
+          
+        if (deleteReviewsError) throw deleteReviewsError;
+      }
+      
+      // Now delete the experience
       const { error } = await supabase
         .from('experiences')
         .delete()
@@ -373,6 +393,15 @@ const AdminExperiences = () => {
                   </TableCell>
                   <TableCell>
                     <div className="flex space-x-2">
+                      <Link to={`/experiences/${experience.id}`} target="_blank">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="text-blue-500"
+                        >
+                          <Eye className="h-4 w-4" />
+                        </Button>
+                      </Link>
                       <Button
                         variant="ghost"
                         size="sm"
