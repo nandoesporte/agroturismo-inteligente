@@ -111,6 +111,7 @@ export type Database = {
           created_at: string
           experience_id: string
           id: string
+          property_id: string | null
           rating: number
           user_avatar: string | null
           user_id: string | null
@@ -121,6 +122,7 @@ export type Database = {
           created_at?: string
           experience_id: string
           id?: string
+          property_id?: string | null
           rating: number
           user_avatar?: string | null
           user_id?: string | null
@@ -131,6 +133,7 @@ export type Database = {
           created_at?: string
           experience_id?: string
           id?: string
+          property_id?: string | null
           rating?: number
           user_avatar?: string | null
           user_id?: string | null
@@ -142,6 +145,13 @@ export type Database = {
             columns: ["experience_id"]
             isOneToOne: false
             referencedRelation: "experiences"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "reviews_property_id_fkey"
+            columns: ["property_id"]
+            isOneToOne: false
+            referencedRelation: "properties"
             referencedColumns: ["id"]
           },
         ]

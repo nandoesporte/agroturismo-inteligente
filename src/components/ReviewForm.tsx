@@ -9,11 +9,18 @@ import { Star } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 interface ReviewFormProps {
-  experienceId: string;
+  experienceId?: string;
+  propertyId?: string;
   onReviewSubmitted: () => void;
+  onSubmit?: (reviewData: any) => Promise<void>;
 }
 
-const ReviewForm: React.FC<ReviewFormProps> = ({ experienceId, onReviewSubmitted }) => {
+const ReviewForm: React.FC<ReviewFormProps> = ({ 
+  experienceId,
+  propertyId,
+  onReviewSubmitted,
+  onSubmit 
+}) => {
   const [rating, setRating] = useState(0);
   const [comment, setComment] = useState('');
   const [tempRating, setTempRating] = useState(0);
@@ -27,7 +34,7 @@ const ReviewForm: React.FC<ReviewFormProps> = ({ experienceId, onReviewSubmitted
     if (!user) {
       toast({
         title: "Login necessário",
-        description: "Você precisa estar logado para avaliar uma experiência.",
+        description: "Você precisa estar logado para avaliar.",
         variant: "destructive"
       });
       return;
@@ -54,21 +61,48 @@ const ReviewForm: React.FC<ReviewFormProps> = ({ experienceId, onReviewSubmitted
     try {
       setIsSubmitting(true);
 
+      // If custom onSubmit handler is provided, use it
+      if (onSubmit) {
+        await onSubmit({
+          rating,
+          comment,
+          experience_id: experienceId,
+          property_id: propertyId
+        });
+        
+        // Reset form
+        setRating(0);
+        setComment('');
+        
+        // Notify parent component
+        onReviewSubmitted();
+        return;
+      }
+
       // Get user profile information
       const { data: userData } = await supabase.auth.getUser();
       const userName = userData.user?.user_metadata?.full_name || 'Usuário';
       const userAvatar = userData.user?.user_metadata?.avatar_url;
 
+      // Default submission logic
+      const reviewData = {
+        user_id: user.id,
+        rating,
+        comment,
+        user_name: userName,
+        user_avatar: userAvatar
+      };
+
+      // Add the correct ID based on context
+      if (experienceId) {
+        Object.assign(reviewData, { experience_id: experienceId });
+      } else if (propertyId) {
+        Object.assign(reviewData, { property_id: propertyId });
+      }
+
       const { error } = await supabase
         .from('reviews')
-        .insert({
-          experience_id: experienceId,
-          user_id: user.id,
-          rating,
-          comment,
-          user_name: userName,
-          user_avatar: userAvatar
-        });
+        .insert(reviewData);
 
       if (error) throw error;
 

@@ -545,7 +545,24 @@ const PropertyDetail = () => {
                     {showAddReview ? (
                       <div className="border border-border rounded-lg p-4 mb-6">
                         <h3 className="text-lg font-medium mb-4">Adicionar Avaliação</h3>
-                        <ReviewForm onSubmit={handleReviewSubmit} context="property" />
+                        <ReviewForm 
+                          propertyId={id}
+                          onReviewSubmitted={() => {
+                            const fetchReviews = async () => {
+                              const { data, error } = await supabase
+                                .from('reviews')
+                                .select('*')
+                                .eq('property_id', id)
+                                .order('created_at', { ascending: false });
+                              
+                              if (!error && data) {
+                                setDbReviews(data);
+                              }
+                            };
+                            
+                            fetchReviews();
+                          }}
+                        />
                         <div className="mt-4 flex justify-end">
                           <Button 
                             variant="outline" 
