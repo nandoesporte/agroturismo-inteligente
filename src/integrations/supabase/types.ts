@@ -14,16 +14,189 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      experiences: {
+        Row: {
+          category: string | null
+          created_at: string
+          description: string
+          duration: string
+          id: string
+          image: string | null
+          price: number
+          rating: number | null
+          review_count: number | null
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          category?: string | null
+          created_at?: string
+          description: string
+          duration: string
+          id?: string
+          image?: string | null
+          price: number
+          rating?: number | null
+          review_count?: number | null
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          category?: string | null
+          created_at?: string
+          description?: string
+          duration?: string
+          id?: string
+          image?: string | null
+          price?: number
+          rating?: number | null
+          review_count?: number | null
+          title?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      properties: {
+        Row: {
+          amenities: string[] | null
+          contact: Json | null
+          created_at: string
+          hours: string | null
+          id: string
+          image: string | null
+          images: string[] | null
+          is_featured: boolean | null
+          location: string
+          name: string
+          price: number
+          rating: number | null
+          review_count: number | null
+          tags: string[] | null
+          updated_at: string
+        }
+        Insert: {
+          amenities?: string[] | null
+          contact?: Json | null
+          created_at?: string
+          hours?: string | null
+          id?: string
+          image?: string | null
+          images?: string[] | null
+          is_featured?: boolean | null
+          location: string
+          name: string
+          price: number
+          rating?: number | null
+          review_count?: number | null
+          tags?: string[] | null
+          updated_at?: string
+        }
+        Update: {
+          amenities?: string[] | null
+          contact?: Json | null
+          created_at?: string
+          hours?: string | null
+          id?: string
+          image?: string | null
+          images?: string[] | null
+          is_featured?: boolean | null
+          location?: string
+          name?: string
+          price?: number
+          rating?: number | null
+          review_count?: number | null
+          tags?: string[] | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      reviews: {
+        Row: {
+          comment: string | null
+          created_at: string
+          experience_id: string
+          id: string
+          property_id: string | null
+          rating: number
+          user_avatar: string | null
+          user_id: string | null
+          user_name: string
+        }
+        Insert: {
+          comment?: string | null
+          created_at?: string
+          experience_id: string
+          id?: string
+          property_id?: string | null
+          rating: number
+          user_avatar?: string | null
+          user_id?: string | null
+          user_name: string
+        }
+        Update: {
+          comment?: string | null
+          created_at?: string
+          experience_id?: string
+          id?: string
+          property_id?: string | null
+          rating?: number
+          user_avatar?: string | null
+          user_id?: string | null
+          user_name?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "reviews_experience_id_fkey"
+            columns: ["experience_id"]
+            isOneToOne: false
+            referencedRelation: "experiences"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "reviews_property_id_fkey"
+            columns: ["property_id"]
+            isOneToOne: false
+            referencedRelation: "properties"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      user_roles: {
+        Row: {
+          created_at: string
+          id: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      has_role: {
+        Args: {
+          _role: Database["public"]["Enums"]["app_role"]
+          _user_id: string
+        }
+        Returns: boolean
+      }
     }
     Enums: {
-      [_ in never]: never
+      app_role: "admin" | "user"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -150,6 +323,8 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      app_role: ["admin", "user"],
+    },
   },
 } as const
