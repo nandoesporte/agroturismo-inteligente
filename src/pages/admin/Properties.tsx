@@ -108,7 +108,25 @@ const AdminProperties = () => {
         .order('created_at', { ascending: false });
 
       if (error) throw error;
-      setProperties(data || []);
+      
+      // Transform database data to match Property interface
+      const transformedProperties: Property[] = (data || []).map(item => ({
+        id: item.id,
+        name: item.name,
+        location: item.location,
+        price: item.price,
+        rating: item.rating || 0,
+        reviewCount: item.review_count || 0,
+        image: item.image || '',
+        images: item.images || [],
+        tags: item.tags || [],
+        amenities: item.amenities || [],
+        hours: item.hours || '',
+        contact: (item.contact as Property['contact']) || {},
+        isFeatured: item.is_featured || false
+      }));
+      
+      setProperties(transformedProperties);
     } catch (error: any) {
       toast({
         title: "Erro ao carregar propriedades",

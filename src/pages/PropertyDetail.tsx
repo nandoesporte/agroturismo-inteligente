@@ -87,11 +87,11 @@ const PropertyDetail = () => {
           image: propertyData.image || '',
           images: propertyData.images || [],
           tags: propertyData.tags || [],
-          description: propertyData.description || '',
+          description: `Bem-vindo à ${propertyData.name}, localizada em ${propertyData.location}. Uma experiência única de agroturismo no Paraná.`,
           amenities: propertyData.amenities || [],
-          activities: propertyData.activities || [],
+          activities: propertyData.tags || [],
           hours: propertyData.hours || '',
-          contact: propertyData.contact || {
+          contact: (propertyData.contact as Property['contact']) || {
             phone: 'Não informado',
             email: '',
             website: '',
