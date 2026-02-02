@@ -11,7 +11,7 @@ import { Label } from '@/components/ui/label';
 import { Filter, Map, SlidersHorizontal, X } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import ChatbotButton from '@/components/ChatbotButton';
-import { supabase } from '@/lib/supabase';
+import { supabase } from '@/integrations/supabase/client';
 import { Loader2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 
@@ -51,7 +51,7 @@ const Properties = () => {
       if (error) throw error;
       
       // Transform the data to match the Property interface
-      const transformedProperties = data.map(item => ({
+      const transformedProperties: Property[] = data.map(item => ({
         id: item.id,
         name: item.name,
         location: item.location,
@@ -61,10 +61,10 @@ const Properties = () => {
         image: item.image || 'https://images.unsplash.com/photo-1566043641507-95a1226a03c1?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1470&q=80',
         images: item.images || [],
         tags: item.tags || [],
-        isFeatured: item.is_featured,
+        isFeatured: item.is_featured || false,
         amenities: item.amenities || [],
-        hours: item.hours,
-        contact: item.contact || {}
+        hours: item.hours || '',
+        contact: (item.contact as Property['contact']) || {}
       }));
       
       console.log('Fetched properties:', transformedProperties.length);

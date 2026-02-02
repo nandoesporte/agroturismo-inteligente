@@ -4,7 +4,7 @@ import { ArrowLeft, ArrowRight, Loader2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import PropertyCard, { Property } from './PropertyCard';
 import { Button } from '@/components/ui/button';
-import { supabase } from '@/lib/supabase';
+import { supabase } from '@/integrations/supabase/client';
 import { Link } from 'react-router-dom';
 
 const FeaturedProperties = () => {

@@ -2,7 +2,7 @@
 import React, { useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
-import { supabase } from '@/lib/supabase';
+import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Star } from 'lucide-react';
@@ -87,25 +87,32 @@ const ReviewForm: React.FC<ReviewFormProps> = ({
       const userName = userData.user?.user_metadata?.full_name || 'Usuário';
       const userAvatar = userData.user?.user_metadata?.avatar_url;
 
-      // Default submission logic
-      const reviewData = {
+      // Default submission logic - experience_id is required
+      const reviewData: {
+        user_id: string;
+        rating: number;
+        comment: string;
+        user_name: string;
+        user_avatar: string | undefined;
+        experience_id: string;
+        property_id?: string;
+      } = {
         user_id: user.id,
         rating,
         comment,
         user_name: userName,
-        user_avatar: userAvatar
+        user_avatar: userAvatar,
+        experience_id: experienceId || '', // required field
       };
 
-      // Add the correct ID based on context
-      if (experienceId) {
-        Object.assign(reviewData, { experience_id: experienceId });
-      } else if (propertyId) {
-        Object.assign(reviewData, { property_id: propertyId });
+      // Add property_id if provided
+      if (propertyId) {
+        reviewData.property_id = propertyId;
       }
 
       const { error } = await supabase
         .from('reviews')
-        .insert(reviewData);
+        .insert([reviewData]);
 
       if (error) throw error;
 
