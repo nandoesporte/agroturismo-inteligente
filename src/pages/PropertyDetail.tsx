@@ -10,7 +10,7 @@ import { Property } from '@/components/PropertyCard';
 import ExperienceCard, { Experience } from '@/components/ExperienceCard';
 import ChatbotButton from '@/components/ChatbotButton';
 import { useToast } from '@/components/ui/use-toast';
-import { supabase } from '@/lib/supabase';
+import { supabase } from '@/integrations/supabase/client';
 import ReviewsList from '@/components/ReviewsList';
 import ReviewForm from '@/components/ReviewForm';
 

@@ -2,7 +2,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Send, User, Bot, X, ChevronDown, Smile, Hand } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { supabase } from '@/lib/supabase';
+import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { Textarea } from "@/components/ui/textarea";
 import { Link } from 'react-router-dom';

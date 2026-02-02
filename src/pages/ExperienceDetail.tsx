@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Star, MapPin, Calendar, Clock, ChevronLeft, Users, Loader2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { supabase } from '@/lib/supabase';
+import { supabase } from '@/integrations/supabase/client';
 import { Experience } from '@/components/ExperienceCard';
 import ReviewsList from '@/components/ReviewsList';
 import ChatbotButton from '@/components/ChatbotButton';
